@@ -1,0 +1,424 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    --bg-primary: #1a1625;
+    --bg-secondary: #251e31;
+    --bg-tertiary: #2d2438;
+    --accent-primary: #6b4e9e;
+    --accent-secondary: #8b6bb8;
+    --accent-glow: #9d7fc9;
+    --text-primary: #e8e4f0;
+    --text-secondary: #b8afc7;
+    --text-muted: #8a7d9a;
+    --border-color: #3d3350;
+    --success: #5ea383;
+    --warning: #d4a373;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+}
+
+/* Шапка */
+.header {
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 2px solid var(--border-color);
+}
+
+.user-details {
+    flex: 1;
+}
+
+.username {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.level {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.stat-item {
+    background: var(--bg-tertiary);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent-glow);
+}
+
+/* Игровая зона */
+.game-area {
+    padding: 24px 16px;
+}
+
+.click-zone {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 280px;
+    margin-bottom: 24px;
+}
+
+.crystal-glow {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(107, 78, 158, 0.3) 0%, transparent 70%);
+    animation: pulse 2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.crystal-button {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s;
+    z-index: 10;
+}
+
+.crystal-button:active {
+    transform: scale(0.95);
+}
+
+.crystal-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 20px rgba(157, 127, 201, 0.6));
+}
+
+.crystal-shape {
+    fill: url(#crystalGradient);
+    stroke: var(--accent-glow);
+    stroke-width: 1;
+}
+
+.crystal-facet {
+    fill: rgba(157, 127, 201, 0.2);
+    stroke: var(--accent-secondary);
+    stroke-width: 0.5;
+}
+
+.facet-1 { fill: rgba(157, 127, 201, 0.3); }
+.facet-2 { fill: rgba(157, 127, 201, 0.15); }
+.facet-3 { fill: rgba(157, 127, 201, 0.25); }
+.facet-4 { fill: rgba(157, 127, 201, 0.2); }
+.facet-5 { fill: rgba(157, 127, 201, 0.35); }
+
+.click-indicator {
+    position: absolute;
+    pointer-events: none;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent-glow);
+    opacity: 0;
+}
+
+.click-indicator.show {
+    animation: floatUp 0.8s ease-out;
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-60px); opacity: 0; }
+}
+
+/* Прогресс бар */
+.progress-container {
+    margin-bottom: 24px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-glow));
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Вкладки */
+.tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px;
+    margin-bottom: 16px;
+}
+
+.tab {
+    flex: 1;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tab.active {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: var(--text-primary);
+    border-color: var(--accent-secondary);
+}
+
+/* Контент вкладок */
+.tab-content {
+    padding: 0 16px 24px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Список улучшений */
+.upgrades-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.upgrade-item {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+}
+
+.upgrade-item.affordable {
+    border-color: var(--accent-primary);
+    background: linear-gradient(135deg, rgba(107, 78, 158, 0.1), rgba(139, 107, 184, 0.1));
+}
+
+.upgrade-item.disabled {
+    opacity: 0.5;
+}
+
+.upgrade-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.upgrade-info {
+    flex: 1;
+}
+
+.upgrade-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.upgrade-description {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.upgrade-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+}
+
+.upgrade-level {
+    color: var(--accent-glow);
+}
+
+.upgrade-profit {
+    color: var(--success);
+}
+
+.upgrade-buy {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.upgrade-buy:active {
+    transform: scale(0.95);
+}
+
+.upgrade-buy:disabled {
+    background: var(--bg-secondary);
+    cursor: not-allowed;
+}
+
+/* Достижения */
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.achievement-item {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 12px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.achievement-item.unlocked {
+    border-color: var(--accent-glow);
+    background: linear-gradient(135deg, rgba(107, 78, 158, 0.2), rgba(139, 107, 184, 0.2));
+}
+
+.achievement-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+
+.achievement-item.unlocked .achievement-icon {
+    filter: grayscale(0%);
+    opacity: 1;
+}
+
+.achievement-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.achievement-item.unlocked .achievement-name {
+    color: var(--text-primary);
+}
+
+.achievement-description {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+/* Статистика */
+.stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stat-row {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-row span:first-child {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.stat-row span:last-child {
+    color: var(--accent-glow);
+    font-size: 18px;
+    font-weight: 700;
+}
