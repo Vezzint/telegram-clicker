@@ -1,4 +1,4 @@
-const GAME_VERSION = '2.4';
+const GAME_VERSION = '3.0';
 const savedVersion = localStorage.getItem('gameVersion');
 
 if (savedVersion !== GAME_VERSION) {
@@ -9,41 +9,11 @@ if (savedVersion !== GAME_VERSION) {
             names.forEach(name => caches.delete(name));
         });
     }
-    window.location.reload(true);
 }
 
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
-
-function getUserDataFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const userParam = urlParams.get('user');
-    
-    if (userParam) {
-        try {
-            const userJson = atob(userParam);
-            const userData = JSON.parse(userJson);
-            console.log('Загружены данные пользователя:', userData);
-            return userData;
-        } catch (e) {
-            console.error('Ошибка парсинга данных пользователя:', e);
-        }
-    }
-    
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        const user = tg.initDataUnsafe.user;
-        return {
-            id: user.id,
-            first_name: user.first_name || 'Player',
-            last_name: user.last_name || '',
-            username: user.username || '',
-            avatar: ''
-        };
-    }
-    
-    return null;
-}
 
 let gameState = {
     points: 0,
@@ -68,84 +38,111 @@ let gameState = {
     energy: 100,
     maxEnergy: 100,
     energyRegenRate: 1,
-    lastBonusTime: 0
+    lastBonusTime: 0,
+    lastClickTime: 0,
+    clickCooldown: 50,
+    theme: 'dark'
 };
 
 const upgradeDefinitions = [
-    { id: 'cursor', name: 'Магический курсор', icon: '👆', description: 'Увеличивает силу клика', baseCost: 10, baseProfit: 1, profitType: 'click', costMultiplier: 1.15 },
-    { id: 'energy', name: 'Кристалл энергии', icon: '⚡', description: '+10 макс. энергии', baseCost: 25, baseProfit: 10, profitType: 'energy', costMultiplier: 1.2 },
-    { id: 'critical', name: 'Око удачи', icon: '🎯', description: '+2% шанс крита', baseCost: 100, baseProfit: 0.02, profitType: 'critical', costMultiplier: 1.3 },
-    { id: 'auto1', name: 'Младший маг', icon: '🧙', description: 'Генерирует 1 очко/сек', baseCost: 50, baseProfit: 1, profitType: 'auto', costMultiplier: 1.2 },
-    { id: 'auto2', name: 'Кристальная шахта', icon: '⛏️', description: 'Генерирует 5 очков/сек', baseCost: 250, baseProfit: 5, profitType: 'auto', costMultiplier: 1.25 },
-    { id: 'auto3', name: 'Портал энергии', icon: '🌀', description: 'Генерирует 20 очков/сек', baseCost: 1000, baseProfit: 20, profitType: 'auto', costMultiplier: 1.3 },
-    { id: 'auto4', name: 'Древний храм', icon: '🏛️', description: 'Генерирует 100 очков/сек', baseCost: 5000, baseProfit: 100, profitType: 'auto', costMultiplier: 1.35 },
-    { id: 'auto5', name: 'Космический генератор', icon: '🛸', description: 'Генерирует 500 очков/сек', baseCost: 25000, baseProfit: 500, profitType: 'auto', costMultiplier: 1.4 }
+    { id: 'cursor', name: 'Магический курсор', icon: '👆', description: 'Увеличивает силу клика', baseCost: 5, baseProfit: 0.5, profitType: 'click', costMultiplier: 1.12 },
+    { id: 'cursor2', name: 'Усиленный курсор', icon: '✨', description: 'Еще больше силы клика', baseCost: 20, baseProfit: 1, profitType: 'click', costMultiplier: 1.13 },
+    { id: 'cursor3', name: 'Мощный курсор', icon: '💫', description: 'Огромная сила клика', baseCost: 100, baseProfit: 3, profitType: 'click', costMultiplier: 1.14 },
+    
+    { id: 'energy1', name: 'Кристалл энергии', icon: '⚡', description: '+10 макс. энергии', baseCost: 15, baseProfit: 10, profitType: 'energy', costMultiplier: 1.15 },
+    { id: 'energy2', name: 'Энергетический усилитель', icon: '🔋', description: '+20 макс. энергии', baseCost: 80, baseProfit: 20, profitType: 'energy', costMultiplier: 1.18 },
+    { id: 'regen1', name: 'Регенерация энергии', icon: '♻️', description: '+0.5 реген/сек', baseCost: 50, baseProfit: 0.5, profitType: 'regen', costMultiplier: 1.2 },
+    
+    { id: 'critical1', name: 'Око удачи', icon: '🎯', description: '+1% шанс крита', baseCost: 60, baseProfit: 0.01, profitType: 'critical', costMultiplier: 1.25 },
+    { id: 'critical2', name: 'Божественная меткость', icon: '🎲', description: '+2% шанс крита', baseCost: 300, baseProfit: 0.02, profitType: 'critical', costMultiplier: 1.3 },
+    { id: 'critMulti', name: 'Критическая сила', icon: '💥', description: '+0.5x крит урон', baseCost: 500, baseProfit: 0.5, profitType: 'critMulti', costMultiplier: 1.35 },
+    
+    { id: 'auto1', name: 'Младший маг', icon: '🧙', description: 'Генерирует 0.5/сек', baseCost: 25, baseProfit: 0.5, profitType: 'auto', costMultiplier: 1.15 },
+    { id: 'auto2', name: 'Кристальная шахта', icon: '⛏️', description: 'Генерирует 2/сек', baseCost: 100, baseProfit: 2, profitType: 'auto', costMultiplier: 1.18 },
+    { id: 'auto3', name: 'Портал энергии', icon: '🌀', description: 'Генерирует 8/сек', baseCost: 500, baseProfit: 8, profitType: 'auto', costMultiplier: 1.2 },
+    { id: 'auto4', name: 'Древний храм', icon: '🏛️', description: 'Генерирует 30/сек', baseCost: 2500, baseProfit: 30, profitType: 'auto', costMultiplier: 1.22 },
+    { id: 'auto5', name: 'Космический генератор', icon: '🛸', description: 'Генерирует 120/сек', baseCost: 12000, baseProfit: 120, profitType: 'auto', costMultiplier: 1.25 },
+    { id: 'auto6', name: 'Черная дыра', icon: '🌑', description: 'Генерирует 500/сек', baseCost: 60000, baseProfit: 500, profitType: 'auto', costMultiplier: 1.28 },
+    { id: 'auto7', name: 'Временной разлом', icon: '⏰', description: 'Генерирует 2000/сек', baseCost: 300000, baseProfit: 2000, profitType: 'auto', costMultiplier: 1.3 },
+    { id: 'auto8', name: 'Измерение бесконечности', icon: '♾️', description: 'Генерирует 10000/сек', baseCost: 1500000, baseProfit: 10000, profitType: 'auto', costMultiplier: 1.32 }
 ];
 
 const boosterDefinitions = [
-    { id: 'double', name: 'Двойной удар', icon: '⚔️', description: 'x2 очков за клик', cost: 500, duration: 30000, effect: 'multiplier', value: 2 },
-    { id: 'triple', name: 'Тройная сила', icon: '🔱', description: 'x3 очков за клик', cost: 1500, duration: 30000, effect: 'multiplier', value: 3 },
-    { id: 'frenzy', name: 'Безумие', icon: '💥', description: 'x5 всех доходов', cost: 5000, duration: 20000, effect: 'frenzy', value: 5 },
-    { id: 'energy_boost', name: 'Энергетический взрыв', icon: '⚡', description: 'Восстановить энергию', cost: 300, duration: 0, effect: 'energy', value: 100 }
+    { id: 'double', name: 'Двойной удар', icon: '⚔️', description: 'x2 очков за клик', cost: 300, duration: 30000, effect: 'multiplier', value: 2 },
+    { id: 'triple', name: 'Тройная сила', icon: '🔱', description: 'x3 очков за клик', cost: 800, duration: 30000, effect: 'multiplier', value: 3 },
+    { id: 'mega', name: 'Мега усиление', icon: '⭐', description: 'x5 очков за клик', cost: 2000, duration: 25000, effect: 'multiplier', value: 5 },
+    { id: 'frenzy', name: 'Безумие', icon: '💥', description: 'x10 всех доходов', cost: 5000, duration: 15000, effect: 'frenzy', value: 10 },
+    { id: 'energy_boost', name: 'Энергетический взрыв', icon: '⚡', description: 'Полная энергия', cost: 200, duration: 0, effect: 'energy', value: 100 },
+    { id: 'auto_boost', name: 'Турбо режим', icon: '🚀', description: 'x3 пассивного дохода 1 мин', cost: 1500, duration: 60000, effect: 'autoMulti', value: 3 }
 ];
 
 const achievementDefinitions = [
-    { id: 'clicks_10', icon: '👆', name: 'Новичок', description: '10 кликов', requirement: 10, type: 'clicks' },
-    { id: 'clicks_100', icon: '✨', name: 'Кликер', description: '100 кликов', requirement: 100, type: 'clicks' },
-    { id: 'clicks_1000', icon: '⚡', name: 'Мастер', description: '1000 кликов', requirement: 1000, type: 'clicks' },
-    { id: 'clicks_10000', icon: '🌟', name: 'Легенда', description: '10000 кликов', requirement: 10000, type: 'clicks' },
-    { id: 'points_100', icon: '💎', name: 'Богач', description: '100 очков', requirement: 100, type: 'points' },
-    { id: 'points_1000', icon: '💰', name: 'Магнат', description: '1000 очков', requirement: 1000, type: 'points' },
-    { id: 'points_10000', icon: '👑', name: 'Король', description: '10000 очков', requirement: 10000, type: 'points' },
-    { id: 'points_100000', icon: '🏆', name: 'Император', description: '100000 очков', requirement: 100000, type: 'points' },
-    { id: 'upgrades_5', icon: '🎯', name: 'Улучшатель', description: '5 улучшений', requirement: 5, type: 'upgrades' },
-    { id: 'upgrades_15', icon: '🚀', name: 'Коллекционер', description: '15 улучшений', requirement: 15, type: 'upgrades' },
-    { id: 'level_5', icon: '⭐', name: 'Звезда', description: 'Уровень 5', requirement: 5, type: 'level' },
-    { id: 'level_10', icon: '💫', name: 'Супер звезда', description: 'Уровень 10', requirement: 10, type: 'level' },
-    { id: 'combo_10', icon: '🔥', name: 'Горячие руки', description: 'Комбо x10', requirement: 10, type: 'combo' },
-    { id: 'combo_50', icon: '💥', name: 'Безумие', description: 'Комбо x50', requirement: 50, type: 'combo' },
-    { id: 'critical_10', icon: '🎯', name: 'Снайпер', description: '10 критов', requirement: 10, type: 'critical' }
+    { id: 'clicks_10', icon: '👆', name: 'Новичок', description: '10 кликов', requirement: 10, type: 'clicks', reward: 50 },
+    { id: 'clicks_50', icon: '👍', name: 'Активный', description: '50 кликов', requirement: 50, type: 'clicks', reward: 100 },
+    { id: 'clicks_100', icon: '✨', name: 'Кликер', description: '100 кликов', requirement: 100, type: 'clicks', reward: 200 },
+    { id: 'clicks_500', icon: '💪', name: 'Профи', description: '500 кликов', requirement: 500, type: 'clicks', reward: 500 },
+    { id: 'clicks_1000', icon: '⚡', name: 'Мастер', description: '1000 кликов', requirement: 1000, type: 'clicks', reward: 1000 },
+    { id: 'clicks_5000', icon: '🔥', name: 'Эксперт', description: '5000 кликов', requirement: 5000, type: 'clicks', reward: 3000 },
+    { id: 'clicks_10000', icon: '🌟', name: 'Легенда', description: '10000 кликов', requirement: 10000, type: 'clicks', reward: 8000 },
+    
+    { id: 'points_50', icon: '💎', name: 'Первые шаги', description: '50 очков', requirement: 50, type: 'points', reward: 25 },
+    { id: 'points_100', icon: '💰', name: 'Богач', description: '100 очков', requirement: 100, type: 'points', reward: 50 },
+    { id: 'points_500', icon: '💵', name: 'Состоятельный', description: '500 очков', requirement: 500, type: 'points', reward: 150 },
+    { id: 'points_1000', icon: '💸', name: 'Магнат', description: '1000 очков', requirement: 1000, type: 'points', reward: 300 },
+    { id: 'points_5000', icon: '👑', name: 'Король', description: '5000 очков', requirement: 5000, type: 'points', reward: 1000 },
+    { id: 'points_10000', icon: '🏆', name: 'Император', description: '10000 очков', requirement: 10000, type: 'points', reward: 2500 },
+    { id: 'points_50000', icon: '💫', name: 'Бог богатства', description: '50000 очков', requirement: 50000, type: 'points', reward: 10000 },
+    { id: 'points_100000', icon: '⚜️', name: 'Владыка', description: '100000 очков', requirement: 100000, type: 'points', reward: 25000 },
+    
+    { id: 'upgrades_1', icon: '🎯', name: 'Первое улучшение', description: '1 улучшение', requirement: 1, type: 'upgrades', reward: 20 },
+    { id: 'upgrades_5', icon: '🎪', name: 'Улучшатель', description: '5 улучшений', requirement: 5, type: 'upgrades', reward: 100 },
+    { id: 'upgrades_10', icon: '🎨', name: 'Коллекционер', description: '10 улучшений', requirement: 10, type: 'upgrades', reward: 300 },
+    { id: 'upgrades_20', icon: '🚀', name: 'Энтузиаст', description: '20 улучшений', requirement: 20, type: 'upgrades', reward: 800 },
+    { id: 'upgrades_50', icon: '🌈', name: 'Мастер улучшений', description: '50 улучшений', requirement: 50, type: 'upgrades', reward: 3000 },
+    
+    { id: 'level_5', icon: '⭐', name: 'Звезда', description: 'Уровень 5', requirement: 5, type: 'level', reward: 200 },
+    { id: 'level_10', icon: '💫', name: 'Супер звезда', description: 'Уровень 10', requirement: 10, type: 'level', reward: 500 },
+    { id: 'level_20', icon: '🌠', name: 'Сияние', description: 'Уровень 20', requirement: 20, type: 'level', reward: 1500 },
+    { id: 'level_30', icon: '✨', name: 'Небесный', description: 'Уровень 30', requirement: 30, type: 'level', reward: 4000 },
+    { id: 'level_50', icon: '🌌', name: 'Космический', description: 'Уровень 50', requirement: 50, type: 'level', reward: 12000 },
+    
+    { id: 'combo_10', icon: '🔥', name: 'Горячие руки', description: 'Комбо x10', requirement: 10, type: 'combo', reward: 150 },
+    { id: 'combo_25', icon: '⚡', name: 'Скоростной', description: 'Комбо x25', requirement: 25, type: 'combo', reward: 400 },
+    { id: 'combo_50', icon: '💥', name: 'Безумие', description: 'Комбо x50', requirement: 50, type: 'combo', reward: 1000 },
+    { id: 'combo_100', icon: '🌪️', name: 'Ураган', description: 'Комбо x100', requirement: 100, type: 'combo', reward: 3000 },
+    
+    { id: 'critical_10', icon: '🎯', name: 'Снайпер', description: '10 критов', requirement: 10, type: 'critical', reward: 100 },
+    { id: 'critical_50', icon: '🎲', name: 'Везунчик', description: '50 критов', requirement: 50, type: 'critical', reward: 500 },
+    { id: 'critical_100', icon: '🍀', name: 'Удачливый', description: '100 критов', requirement: 100, type: 'critical', reward: 1200 },
+    { id: 'critical_500', icon: '✨', name: 'Мастер критов', description: '500 критов', requirement: 500, type: 'critical', reward: 5000 }
 ];
+
+const themes = {
+    1: 'dark',
+    10: 'ocean',
+    20: 'forest',
+    30: 'fire',
+    40: 'cosmic',
+    50: 'gold'
+};
 
 function initializeGame() {
     initializeUpgrades();
     initializeAchievements();
     initializeBoosters();
     
-    const userData = getUserDataFromURL();
-    
-    if (userData) {
-        console.log('Установка данных пользователя:', userData);
-        
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
         const usernameElement = document.getElementById('username');
-        if (userData.username) {
-            usernameElement.textContent = '@' + userData.username;
-        } else if (userData.first_name) {
-            usernameElement.textContent = userData.first_name;
-        }
         
-        const avatarImg = document.getElementById('userAvatar');
-        
-        if (userData.avatar && userData.avatar.length > 0) {
-            console.log('Установка аватарки из base64');
-            avatarImg.src = userData.avatar;
-            avatarImg.style.display = 'block';
-            avatarImg.onerror = function() {
-                console.log('Ошибка загрузки аватарки');
-                this.style.display = 'none';
-                const fallback = document.createElement('div');
-                fallback.className = 'avatar';
-                fallback.textContent = (userData.first_name || 'P').charAt(0).toUpperCase();
-                this.parentNode.replaceChild(fallback, this);
-            };
+        if (user.username) {
+            usernameElement.textContent = '@' + user.username;
         } else {
-            console.log('Аватарка отсутствует, показываем букву');
-            avatarImg.style.display = 'none';
-            const fallback = document.createElement('div');
-            fallback.className = 'avatar';
-            fallback.textContent = (userData.first_name || 'P').charAt(0).toUpperCase();
-            avatarImg.parentNode.replaceChild(fallback, avatarImg);
+            usernameElement.textContent = user.first_name || 'Player';
         }
+        
+        const avatarElement = document.getElementById('userAvatar');
+        avatarElement.textContent = (user.first_name || 'P').charAt(0).toUpperCase();
     }
 }
 
@@ -154,7 +151,7 @@ function initializeUpgrades() {
 }
 
 function initializeAchievements() {
-    gameState.achievements = achievementDefinitions.map(def => ({ ...def, unlocked: false, isNew: false }));
+    gameState.achievements = achievementDefinitions.map(def => ({ ...def, unlocked: false, isNew: false, claimed: false }));
 }
 
 function initializeBoosters() {
@@ -174,7 +171,16 @@ function loadGame() {
                 if (gameState.upgrades[index]) gameState.upgrades[index].level = savedUpgrade.level;
             });
         }
+        if (savedState.achievements) {
+            savedState.achievements.forEach((savedAch, index) => {
+                if (gameState.achievements[index]) {
+                    gameState.achievements[index].unlocked = savedAch.unlocked;
+                    gameState.achievements[index].claimed = savedAch.claimed;
+                }
+            });
+        }
         recalculateStats();
+        updateTheme();
     } else {
         initializeGame();
     }
@@ -184,15 +190,37 @@ function recalculateStats() {
     gameState.pointsPerClick = 1;
     gameState.pointsPerSecond = 0;
     gameState.maxEnergy = 100;
+    gameState.energyRegenRate = 1;
     gameState.criticalChance = 0.05;
+    gameState.criticalMultiplier = 2;
+    
     gameState.upgrades.forEach(upgrade => {
         for (let i = 0; i < upgrade.level; i++) {
             if (upgrade.profitType === 'click') gameState.pointsPerClick += upgrade.baseProfit;
             else if (upgrade.profitType === 'auto') gameState.pointsPerSecond += upgrade.baseProfit;
             else if (upgrade.profitType === 'energy') gameState.maxEnergy += upgrade.baseProfit;
+            else if (upgrade.profitType === 'regen') gameState.energyRegenRate += upgrade.baseProfit;
             else if (upgrade.profitType === 'critical') gameState.criticalChance += upgrade.baseProfit;
+            else if (upgrade.profitType === 'critMulti') gameState.criticalMultiplier += upgrade.baseProfit;
         }
     });
+}
+
+function updateTheme() {
+    const themeKeys = Object.keys(themes).map(Number).sort((a, b) => b - a);
+    let newTheme = 'dark';
+    
+    for (const level of themeKeys) {
+        if (gameState.level >= level) {
+            newTheme = themes[level];
+            break;
+        }
+    }
+    
+    if (newTheme !== gameState.theme) {
+        gameState.theme = newTheme;
+        document.body.className = 'theme-' + newTheme;
+    }
 }
 
 function saveGame() {
@@ -200,13 +228,19 @@ function saveGame() {
 }
 
 document.getElementById('crystalButton').addEventListener('click', (e) => {
+    const now = Date.now();
+    if (now - gameState.lastClickTime < gameState.clickCooldown) return;
+    gameState.lastClickTime = now;
+    
     if (gameState.energy < 1) {
         tg.HapticFeedback.notificationOccurred('error');
         return;
     }
+    
     gameState.energy = Math.max(0, gameState.energy - 1);
     const isCritical = Math.random() < gameState.criticalChance;
     let points = gameState.pointsPerClick * gameState.multiplier;
+    
     if (isCritical) {
         points *= gameState.criticalMultiplier;
         gameState.criticalHits++;
@@ -216,6 +250,7 @@ document.getElementById('crystalButton').addEventListener('click', (e) => {
     } else {
         tg.HapticFeedback.impactOccurred('light');
     }
+    
     gameState.points += points;
     gameState.totalEarned += points;
     gameState.totalClicks++;
@@ -253,20 +288,36 @@ function showClickIndicator(x, y, points, isCritical) {
     indicator.classList.add('show');
     setTimeout(() => indicator.classList.remove('show'), 800);
 }
-
 function checkLevelUp() {
     const requiredExp = getRequiredExperience(gameState.level);
     if (gameState.experience >= requiredExp) {
         gameState.level++;
         gameState.experience -= requiredExp;
+        
+        const reward = gameState.level * 50;
+        gameState.points += reward;
+        gameState.totalEarned += reward;
+        
+        showLevelUpModal(gameState.level, reward);
+        updateTheme();
         tg.HapticFeedback.notificationOccurred('success');
         checkAchievements();
     }
 }
 
 function getRequiredExperience(level) {
-    return Math.floor(100 * Math.pow(1.5, level - 1));
+    return Math.floor(50 * Math.pow(1.4, level - 1));
 }
+
+function showLevelUpModal(level, reward) {
+    document.getElementById('levelUpNumber').textContent = level;
+    document.getElementById('levelUpReward').textContent = '+' + formatNumber(reward) + ' 💎';
+    document.getElementById('levelUpModal').classList.add('show');
+}
+
+document.getElementById('closeLevelUp').addEventListener('click', () => {
+    document.getElementById('levelUpModal').classList.remove('show');
+});
 
 function checkAchievements() {
     gameState.achievements.forEach(achievement => {
@@ -278,13 +329,34 @@ function checkAchievements() {
             else if (achievement.type === 'level') progress = gameState.level;
             else if (achievement.type === 'combo') progress = gameState.bestCombo;
             else if (achievement.type === 'critical') progress = gameState.criticalHits;
+            
             if (progress >= achievement.requirement) {
                 achievement.unlocked = true;
                 achievement.isNew = true;
+                showAchievementModal(achievement);
                 tg.HapticFeedback.notificationOccurred('success');
             }
         }
     });
+}
+
+function showAchievementModal(achievement) {
+    document.getElementById('achievementPopupIcon').textContent = achievement.icon;
+    document.getElementById('achievementPopupName').textContent = achievement.name;
+    document.getElementById('achievementPopupReward').textContent = '+' + formatNumber(achievement.reward) + ' 💎';
+    document.getElementById('achievementModal').classList.add('show');
+    
+    document.getElementById('claimAchievement').onclick = () => {
+        if (!achievement.claimed) {
+            gameState.points += achievement.reward;
+            gameState.totalEarned += achievement.reward;
+            achievement.claimed = true;
+            achievement.isNew = false;
+        }
+        document.getElementById('achievementModal').classList.remove('show');
+        updateUI();
+        saveGame();
+    };
 }
 
 function buyUpgrade(upgradeId) {
@@ -295,10 +367,14 @@ function buyUpgrade(upgradeId) {
         gameState.points -= cost;
         upgrade.level++;
         gameState.upgradesBought++;
+        
         if (upgrade.profitType === 'click') gameState.pointsPerClick += upgrade.baseProfit;
         else if (upgrade.profitType === 'auto') gameState.pointsPerSecond += upgrade.baseProfit;
         else if (upgrade.profitType === 'energy') gameState.maxEnergy += upgrade.baseProfit;
+        else if (upgrade.profitType === 'regen') gameState.energyRegenRate += upgrade.baseProfit;
         else if (upgrade.profitType === 'critical') gameState.criticalChance += upgrade.baseProfit;
+        else if (upgrade.profitType === 'critMulti') gameState.criticalMultiplier += upgrade.baseProfit;
+        
         tg.HapticFeedback.impactOccurred('medium');
         checkAchievements();
         updateUI();
@@ -318,14 +394,20 @@ function activateBooster(boosterId) {
     if (gameState.points >= booster.cost) {
         gameState.points -= booster.cost;
         if (booster.effect === 'energy') {
-            gameState.energy = Math.min(gameState.maxEnergy, gameState.energy + booster.value);
+            gameState.energy = gameState.maxEnergy;
             tg.HapticFeedback.notificationOccurred('success');
         } else {
             booster.active = true;
             booster.endTime = Date.now() + booster.duration;
-            if (booster.effect === 'multiplier' || booster.effect === 'frenzy') {
+            
+            if (booster.effect === 'multiplier') {
                 gameState.multiplier *= booster.value;
+            } else if (booster.effect === 'frenzy') {
+                gameState.multiplier *= booster.value;
+            } else if (booster.effect === 'autoMulti') {
+                // Обрабатывается в генерации пассивного дохода
             }
+            
             tg.HapticFeedback.notificationOccurred('success');
             setTimeout(() => deactivateBooster(boosterId), booster.duration);
         }
@@ -339,9 +421,11 @@ function activateBooster(boosterId) {
 function deactivateBooster(boosterId) {
     const booster = gameState.boosters.find(b => b.id === boosterId);
     if (!booster || !booster.active) return;
+    
     if (booster.effect === 'multiplier' || booster.effect === 'frenzy') {
         gameState.multiplier /= booster.value;
     }
+    
     booster.active = false;
     booster.endTime = 0;
     updateUI();
@@ -351,7 +435,8 @@ function formatNumber(num) {
     if (num < 1000) return Math.floor(num).toString();
     if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
     if (num < 1000000000) return (num / 1000000).toFixed(1) + 'M';
-    return (num / 1000000000).toFixed(1) + 'B';
+    if (num < 1000000000000) return (num / 1000000000).toFixed(1) + 'B';
+    return (num / 1000000000000).toFixed(1) + 'T';
 }
 
 function formatTime(ms) {
@@ -364,15 +449,22 @@ function formatTime(ms) {
 
 function updateUI() {
     document.getElementById('points').textContent = formatNumber(gameState.points);
-    document.getElementById('pointsPerSecond').textContent = formatNumber(gameState.pointsPerSecond * gameState.multiplier);
+    
+    let autoMultiplier = 1;
+    const autoBooster = gameState.boosters.find(b => b.id === 'auto_boost' && b.active);
+    if (autoBooster) autoMultiplier = autoBooster.value;
+    
+    document.getElementById('pointsPerSecond').textContent = formatNumber(gameState.pointsPerSecond * gameState.multiplier * autoMultiplier);
     document.getElementById('level').textContent = gameState.level;
     document.getElementById('multiplier').textContent = 'x' + gameState.multiplier.toFixed(1);
     document.getElementById('energy').textContent = Math.floor(gameState.energy) + '/' + gameState.maxEnergy;
     document.getElementById('energyFill').style.width = (gameState.energy / gameState.maxEnergy) * 100 + '%';
+    
     const requiredExp = getRequiredExperience(gameState.level);
     document.getElementById('progressFill').style.width = (gameState.experience / requiredExp) * 100 + '%';
     document.getElementById('currentProgress').textContent = formatNumber(gameState.experience);
     document.getElementById('nextLevelRequirement').textContent = formatNumber(requiredExp);
+    
     updateBonusTimer();
     renderUpgrades();
     renderBoosters();
@@ -389,6 +481,7 @@ function updateBonusTimer() {
         document.getElementById('bonusBtn').style.animation = 'pulse-bonus 0.5s ease-in-out infinite';
     } else {
         document.getElementById('bonusTimer').textContent = formatTime(bonusInterval - timeSinceBonus);
+        document.getElementById('bonusBtn').style.animation = 'pulse-bonus 2s ease-in-out infinite';
     }
 }
 
@@ -403,7 +496,7 @@ document.getElementById('bonusBtn').addEventListener('click', () => {
 });
 
 function showBonusModal() {
-    const bonusAmount = Math.floor(gameState.pointsPerSecond * 100 + gameState.level * 100);
+    const bonusAmount = Math.floor(gameState.pointsPerSecond * 50 + gameState.level * 50);
     document.getElementById('bonusAmount').textContent = '+' + formatNumber(bonusAmount) + ' 💎';
     document.getElementById('bonusModal').classList.add('show');
     document.getElementById('claimBonus').onclick = () => {
@@ -425,11 +518,15 @@ function renderUpgrades() {
         const canAfford = gameState.points >= cost;
         const item = document.createElement('div');
         item.className = `upgrade-item ${canAfford ? 'affordable' : ''}`;
+        
         let profitText = '';
         if (upgrade.profitType === 'click') profitText = `+${upgrade.baseProfit} за клик`;
         else if (upgrade.profitType === 'auto') profitText = `+${upgrade.baseProfit}/сек`;
         else if (upgrade.profitType === 'energy') profitText = `+${upgrade.baseProfit} энергии`;
+        else if (upgrade.profitType === 'regen') profitText = `+${upgrade.baseProfit} реген`;
         else if (upgrade.profitType === 'critical') profitText = `+${(upgrade.baseProfit * 100).toFixed(0)}% крит`;
+        else if (upgrade.profitType === 'critMulti') profitText = `+${upgrade.baseProfit}x урон`;
+        
         item.innerHTML = `
             <div class="upgrade-icon">${upgrade.icon}</div>
             <div class="upgrade-info">
@@ -480,13 +577,10 @@ function renderAchievements() {
             <div class="achievement-icon">${achievement.icon}</div>
             <div class="achievement-name">${achievement.name}</div>
             <div class="achievement-description">${achievement.description}</div>
+            <div class="achievement-reward">+${formatNumber(achievement.reward)} 💎</div>
         `;
-        if (achievement.isNew) {
-            item.onclick = () => {
-                achievement.isNew = false;
-                item.classList.remove('new');
-                saveGame();
-            };
+        if (achievement.isNew && !achievement.claimed) {
+            item.onclick = () => showAchievementModal(achievement);
         }
         container.appendChild(item);
     });
@@ -499,6 +593,9 @@ function updateStats() {
     document.getElementById('criticalHits').textContent = formatNumber(gameState.criticalHits);
     document.getElementById('bestCombo').textContent = gameState.bestCombo;
     document.getElementById('playTime').textContent = Math.floor((Date.now() - gameState.startTime) / 60000) + ' мин';
+    
+    const unlockedCount = gameState.achievements.filter(a => a.unlocked).length;
+    document.getElementById('achievementsUnlocked').textContent = unlockedCount + '/' + gameState.achievements.length;
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -514,7 +611,11 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 setInterval(() => {
     if (gameState.pointsPerSecond > 0) {
-        const earned = (gameState.pointsPerSecond * gameState.multiplier) / 10;
+        let autoMultiplier = 1;
+        const autoBooster = gameState.boosters.find(b => b.id === 'auto_boost' && b.active);
+        if (autoBooster) autoMultiplier = autoBooster.value;
+        
+        const earned = (gameState.pointsPerSecond * gameState.multiplier * autoMultiplier) / 10;
         gameState.points += earned;
         gameState.totalEarned += earned;
         gameState.experience += earned;
@@ -543,12 +644,31 @@ document.getElementById('bonusModal').addEventListener('click', (e) => {
     if (e.target.id === 'bonusModal') document.getElementById('bonusModal').classList.remove('show');
 });
 
+document.getElementById('achievementModal').addEventListener('click', (e) => {
+    if (e.target.id === 'achievementModal') {
+        document.getElementById('achievementModal').classList.remove('show');
+    }
+});
+
+document.getElementById('levelUpModal').addEventListener('click', (e) => {
+    if (e.target.id === 'levelUpModal') {
+        document.getElementById('levelUpModal').classList.remove('show');
+    }
+});
+
 loadGame();
 updateUI();
 
 tg.MainButton.text = "Сохранить прогресс";
 tg.MainButton.onClick(() => {
-    const data = { action: 'save_progress', points: gameState.points, level: gameState.level, totalClicks: gameState.totalClicks };
+    const data = { 
+        action: 'save_progress', 
+        points: Math.floor(gameState.points), 
+        level: gameState.level, 
+        totalClicks: gameState.totalClicks 
+    };
     tg.sendData(JSON.stringify(data));
 });
+
 if (gameState.level > 1) tg.MainButton.show();
+
