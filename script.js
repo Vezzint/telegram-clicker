@@ -1,5 +1,5 @@
 // Проверка версии и принудительное обновление
-const GAME_VERSION = '2.0';
+const GAME_VERSION = '2.1';
 const savedVersion = localStorage.getItem('gameVersion');
 
 if (savedVersion !== GAME_VERSION) {
@@ -19,6 +19,33 @@ if (savedVersion !== GAME_VERSION) {
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
+
+// Получение данных пользователя из URL
+function getUserDataFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    
+    if (userParam) {
+        try {
+            const userJson = atob(userParam);
+            return JSON.parse(userJson);
+        } catch (e) {
+            console.error('Error parsing user data:', e);
+        }
+    }
+    
+    // Fallback на данные из Telegram Web App
+    if (tg.initDataUnsafe.user) {
+        return {
+            id: tg.initDataUnsafe.user.id,
+            first_name: tg.initDataUnsafe.user.first_name,
+            username: tg.initDataUnsafe.user.username || '',
+            avatar: ''
+        };
+    }
+    
+    return null;
+}
 
 // Игровое состояние
 let gameState = {
@@ -200,19 +227,36 @@ function initializeGame() {
     initializeAchievements();
     initializeBoosters();
     
-    if (tg.initDataUnsafe.user) {
-        const user = tg.initDataUnsafe.user;
-        document.getElementById('username').textContent = user.first_name;
+    // Получаем данные пользователя
+    const userData = getUserDataFromURL();
+    
+    if (userData) {
+        document.getElementById('username').textContent = userData.first_name;
         
-        if (user.photo_url) {
-            document.getElementById('userAvatar').src = user.photo_url;
+        const avatarElement = document.getElementById('userAvatar');
+        if (userData.avatar) {
+            avatarElement.src = userData.avatar;
+            avatarElement.onerror = function() {
+                // Если фото не загрузилось, показываем эмодзи
+                this.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'avatar';
+                fallback.textContent = '👤';
+                fallback.style.fontSize = '24px';
+                this.parentNode.replaceChild(fallback, this);
+            };
         } else {
-            const avatar = document.getElementById('userAvatar');
-            avatar.style.display = 'flex';
-            avatar.textContent = '👤';
+            // Нет аватарки - показываем эмодзи
+            avatarElement.style.display = 'none';
+            const fallback = document.createElement('div');
+            fallback.className = 'avatar';
+            fallback.textContent = '👤';
+            fallback.style.fontSize = '24px';
+            avatarElement.parentNode.replaceChild(fallback, avatarElement);
         }
     }
 }
+
 
 function initializeUpgrades() {
     gameState.upgrades = upgradeDefinitions.map(def => ({
@@ -763,3 +807,4 @@ tg.MainButton.onClick(sendDataToBot);
 if (gameState.level > 1) {
     tg.MainButton.show();
 }
+
