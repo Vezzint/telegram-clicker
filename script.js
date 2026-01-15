@@ -14,8 +14,20 @@ let gameState = {
     experience: 0,
     upgrades: [],
     achievements: [],
+    boosters: [],
     startTime: Date.now(),
-    upgradesBought: 0
+    upgradesBought: 0,
+    criticalHits: 0,
+    bestCombo: 0,
+    currentCombo: 0,
+    comboTimer: null,
+    criticalChance: 0.05,
+    criticalMultiplier: 2,
+    multiplier: 1,
+    energy: 100,
+    maxEnergy: 100,
+    energyRegenRate: 1,
+    lastBonusTime: 0
 };
 
 // Определение улучшений
@@ -29,6 +41,26 @@ const upgradeDefinitions = [
         baseProfit: 1,
         profitType: 'click',
         costMultiplier: 1.15
+    },
+    {
+        id: 'energy',
+        name: 'Кристалл энергии',
+        icon: '⚡',
+        description: '+10 макс. энергии',
+        baseCost: 25,
+        baseProfit: 10,
+        profitType: 'energy',
+        costMultiplier: 1.2
+    },
+    {
+        id: 'critical',
+        name: 'Око удачи',
+        icon: '🎯',
+        description: '+2% шанс крита',
+        baseCost: 100,
+        baseProfit: 0.02,
+        profitType: 'critical',
+        costMultiplier: 1.3
     },
     {
         id: 'auto1',
@@ -82,20 +114,92 @@ const upgradeDefinitions = [
     }
 ];
 
+// Определение бустеров
+const boosterDefinitions = [
+    {
+        id: 'double',
+        name: 'Двойной удар',
+        icon: '⚔️',
+        description: 'x2 очков за клик',
+        cost: 500,
+        duration: 30000,
+        effect: 'multiplier',
+        value: 2
+    },
+    {
+        id: 'triple',
+        name: 'Тройная сила',
+        icon: '🔱',
+        description: 'x3 очков за клик',
+        cost: 1500,
+        duration: 30000,
+        effect: 'multiplier',
+        value: 3
+    },
+    {
+        id: 'frenzy',
+        name: 'Безумие',
+        icon: '💥',
+        description: 'x5 всех доходов',
+        cost: 5000,
+        duration: 20000,
+        effect: 'frenzy',
+        value: 5
+    },
+    {
+        id: 'energy_boost',
+        name: 'Энергетический взрыв',
+        icon: '⚡',
+        description: 'Восстановить энергию',
+        cost: 300,
+        duration: 0,
+        effect: 'energy',
+        value: 100
+    }
+];
+
 // Определение достижений
 const achievementDefinitions = [
     { id: 'clicks_10', icon: '👆', name: 'Новичок', description: '10 кликов', requirement: 10, type: 'clicks' },
     { id: 'clicks_100', icon: '✨', name: 'Кликер', description: '100 кликов', requirement: 100, type: 'clicks' },
     { id: 'clicks_1000', icon: '⚡', name: 'Мастер', description: '1000 кликов', requirement: 1000, type: 'clicks' },
+    { id: 'clicks_10000', icon: '🌟', name: 'Легенда', description: '10000 кликов', requirement: 10000, type: 'clicks' },
     { id: 'points_100', icon: '💎', name: 'Богач', description: '100 очков', requirement: 100, type: 'points' },
     { id: 'points_1000', icon: '💰', name: 'Магнат', description: '1000 очков', requirement: 1000, type: 'points' },
     { id: 'points_10000', icon: '👑', name: 'Король', description: '10000 очков', requirement: 10000, type: 'points' },
+    { id: 'points_100000', icon: '🏆', name: 'Император', description: '100000 очков', requirement: 100000, type: 'points' },
     { id: 'upgrades_5', icon: '🎯', name: 'Улучшатель', description: '5 улучшений', requirement: 5, type: 'upgrades' },
     { id: 'upgrades_15', icon: '🚀', name: 'Коллекционер', description: '15 улучшений', requirement: 15, type: 'upgrades' },
-    { id: 'level_5', icon: '⭐', name: 'Звезда', description: 'Уровень 5', requirement: 5, type: 'level' }
+    { id: 'level_5', icon: '⭐', name: 'Звезда', description: 'Уровень 5', requirement: 5, type: 'level' },
+    { id: 'level_10', icon: '💫', name: 'Супер звезда', description: 'Уровень 10', requirement: 10, type: 'level' },
+    { id: 'combo_10', icon: '🔥', name: 'Горячие руки', description: 'Комбо x10', requirement: 10, type: 'combo' },
+    { id: 'combo_50', icon: '💥', name: 'Безумие', description: 'Комбо x50', requirement: 50, type: 'combo' },
+    { id: 'critical_10', icon: '🎯', name: 'Снайпер', description: '10 критов', requirement: 10, type: 'critical' }
 ];
 
-// Инициализация улучшений
+// Инициализация
+function initializeGame() {
+    initializeUpgrades();
+    initializeAchievements();
+    initializeBoosters();
+    
+    // Установка данных пользователя из Telegram
+    if (tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        document.getElementById('username').textContent = user.first_name;
+        
+        // Установка аватарки
+        if (user.photo_url) {
+            document.getElementById('userAvatar').src = user.photo_url;
+        } else {
+            // Fallback на эмодзи если нет фото
+            const avatar = document.getElementById('userAvatar');
+            avatar.style.display = 'flex';
+            avatar.textContent = '👤';
+        }
+    }
+}
+
 function initializeUpgrades() {
     gameState.upgrades = upgradeDefinitions.map(def => ({
         ...def,
@@ -103,11 +207,19 @@ function initializeUpgrades() {
     }));
 }
 
-// Инициализация достижений
 function initializeAchievements() {
     gameState.achievements = achievementDefinitions.map(def => ({
         ...def,
-        unlocked: false
+        unlocked: false,
+        isNew: false
+    }));
+}
+
+function initializeBoosters() {
+    gameState.boosters = boosterDefinitions.map(def => ({
+        ...def,
+        active: false,
+        endTime: 0
     }));
 }
 
@@ -117,15 +229,48 @@ function loadGame() {
     if (saved) {
         const savedState = JSON.parse(saved);
         gameState = { ...gameState, ...savedState };
-    } else {
+        
+        // Переинициализация объектов
         initializeUpgrades();
         initializeAchievements();
+        initializeBoosters();
+        
+        // Применение сохраненных уровней улучшений
+        if (savedState.upgrades) {
+            savedState.upgrades.forEach((savedUpgrade, index) => {
+                if (gameState.upgrades[index]) {
+                    gameState.upgrades[index].level = savedUpgrade.level;
+                }
+            });
+        }
+        
+        // Пересчет характеристик
+        recalculateStats();
+    } else {
+        initializeGame();
     }
+}
+
+// Пересчет характеристик после загрузки
+function recalculateStats() {
+    gameState.pointsPerClick = 1;
+    gameState.pointsPerSecond = 0;
+    gameState.maxEnergy = 100;
+    gameState.criticalChance = 0.05;
     
-    // Установка имени пользователя из Telegram
-    if (tg.initDataUnsafe.user) {
-        document.getElementById('username').textContent = tg.initDataUnsafe.user.first_name;
-    }
+    gameState.upgrades.forEach(upgrade => {
+        for (let i = 0; i < upgrade.level; i++) {
+            if (upgrade.profitType === 'click') {
+                gameState.pointsPerClick += upgrade.baseProfit;
+            } else if (upgrade.profitType === 'auto') {
+                gameState.pointsPerSecond += upgrade.baseProfit;
+            } else if (upgrade.profitType === 'energy') {
+                gameState.maxEnergy += upgrade.baseProfit;
+            } else if (upgrade.profitType === 'critical') {
+                gameState.criticalChance += upgrade.baseProfit;
+            }
+        }
+    });
 }
 
 // Сохранение игры
@@ -135,14 +280,39 @@ function saveGame() {
 
 // Обработка клика по кристаллу
 document.getElementById('crystalButton').addEventListener('click', (e) => {
-    const points = gameState.pointsPerClick;
+    if (gameState.energy < 1) {
+        tg.HapticFeedback.notificationOccurred('error');
+        return;
+    }
+    
+    gameState.energy = Math.max(0, gameState.energy - 1);
+    
+    // Проверка критического удара
+    const isCritical = Math.random() < gameState.criticalChance;
+    let points = gameState.pointsPerClick * gameState.multiplier;
+    
+    if (isCritical) {
+        points *= gameState.criticalMultiplier;
+        gameState.criticalHits++;
+        document.getElementById('crystalButton').classList.add('critical');
+        setTimeout(() => {
+            document.getElementById('crystalButton').classList.remove('critical');
+        }, 500);
+        tg.HapticFeedback.impactOccurred('heavy');
+    } else {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+    
     gameState.points += points;
     gameState.totalEarned += points;
     gameState.totalClicks++;
     gameState.experience += points;
     
+    // Комбо система
+    updateCombo();
+    
     // Анимация индикатора
-    showClickIndicator(e.pageX, e.pageY, points);
+    showClickIndicator(e.pageX, e.pageY, points, isCritical);
     
     // Проверка уровня
     checkLevelUp();
@@ -155,14 +325,42 @@ document.getElementById('crystalButton').addEventListener('click', (e) => {
     saveGame();
 });
 
+// Система комбо
+function updateCombo() {
+    gameState.currentCombo++;
+    
+    if (gameState.currentCombo > gameState.bestCombo) {
+        gameState.bestCombo = gameState.currentCombo;
+    }
+    
+    // Показать комбо если больше 5
+    if (gameState.currentCombo >= 5) {
+        const comboDisplay = document.getElementById('comboDisplay');
+        comboDisplay.classList.add('show');
+        document.getElementById('comboCount').textContent = gameState.currentCombo;
+    }
+    
+    // Сброс таймера комбо
+    clearTimeout(gameState.comboTimer);
+    gameState.comboTimer = setTimeout(() => {
+        gameState.currentCombo = 0;
+        document.getElementById('comboDisplay').classList.remove('show');
+    }, 2000);
+}
+
 // Показ индикатора клика
-function showClickIndicator(x, y, points) {
+function showClickIndicator(x, y, points, isCritical) {
     const indicator = document.getElementById('clickIndicator');
     indicator.textContent = `+${formatNumber(points)}`;
     indicator.style.left = x + 'px';
     indicator.style.top = y + 'px';
-    indicator.classList.remove('show');
-    void indicator.offsetWidth; // Trigger reflow
+    indicator.classList.remove('show', 'critical');
+    
+    if (isCritical) {
+        indicator.classList.add('critical');
+    }
+    
+    void indicator.offsetWidth;
     indicator.classList.add('show');
     
     setTimeout(() => {
@@ -177,20 +375,18 @@ function checkLevelUp() {
         gameState.level++;
         gameState.experience -= requiredExp;
         showLevelUpAnimation();
+        checkAchievements();
     }
 }
 
-// Получение необходимого опыта для уровня
 function getRequiredExperience(level) {
     return Math.floor(100 * Math.pow(1.5, level - 1));
 }
 
-// Анимация повышения уровня
 function showLevelUpAnimation() {
     tg.HapticFeedback.notificationOccurred('success');
-    // Можно добавить дополнительную анимацию
+    // Можно добавить визуальную анимацию
 }
-
 // Проверка достижений
 function checkAchievements() {
     gameState.achievements.forEach(achievement => {
@@ -209,14 +405,28 @@ function checkAchievements() {
                 case 'level':
                     progress = gameState.level;
                     break;
+                case 'combo':
+                    progress = gameState.bestCombo;
+                    break;
+                case 'critical':
+                    progress = gameState.criticalHits;
+                    break;
             }
             
             if (progress >= achievement.requirement) {
                 achievement.unlocked = true;
+                achievement.isNew = true;
+                showAchievementNotification(achievement);
                 tg.HapticFeedback.notificationOccurred('success');
             }
         }
     });
+}
+
+// Показ уведомления о достижении
+function showAchievementNotification(achievement) {
+    // Можно добавить красивое уведомление
+    console.log('Achievement unlocked:', achievement.name);
 }
 
 // Покупка улучшения
@@ -233,20 +443,80 @@ function buyUpgrade(upgradeId) {
         // Обновление характеристик
         if (upgrade.profitType === 'click') {
             gameState.pointsPerClick += upgrade.baseProfit;
-        } else {
+        } else if (upgrade.profitType === 'auto') {
             gameState.pointsPerSecond += upgrade.baseProfit;
+        } else if (upgrade.profitType === 'energy') {
+            gameState.maxEnergy += upgrade.baseProfit;
+        } else if (upgrade.profitType === 'critical') {
+            gameState.criticalChance += upgrade.baseProfit;
         }
         
         tg.HapticFeedback.impactOccurred('medium');
         checkAchievements();
         updateUI();
         saveGame();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
     }
 }
 
 // Получение стоимости улучшения
 function getUpgradeCost(upgrade) {
     return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level));
+}
+
+// Активация бустера
+function activateBooster(boosterId) {
+    const booster = gameState.boosters.find(b => b.id === boosterId);
+    if (!booster || booster.active) return;
+    
+    if (gameState.points >= booster.cost) {
+        gameState.points -= booster.cost;
+        
+        if (booster.effect === 'energy') {
+            // Мгновенное восстановление энергии
+            gameState.energy = Math.min(gameState.maxEnergy, gameState.energy + booster.value);
+            tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            // Временный бустер
+            booster.active = true;
+            booster.endTime = Date.now() + booster.duration;
+            
+            if (booster.effect === 'multiplier') {
+                gameState.multiplier *= booster.value;
+            } else if (booster.effect === 'frenzy') {
+                gameState.multiplier *= booster.value;
+            }
+            
+            tg.HapticFeedback.notificationOccurred('success');
+            
+            // Таймер окончания бустера
+            setTimeout(() => {
+                deactivateBooster(boosterId);
+            }, booster.duration);
+        }
+        
+        updateUI();
+        saveGame();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+}
+
+// Деактивация бустера
+function deactivateBooster(boosterId) {
+    const booster = gameState.boosters.find(b => b.id === boosterId);
+    if (!booster || !booster.active) return;
+    
+    if (booster.effect === 'multiplier') {
+        gameState.multiplier /= booster.value;
+    } else if (booster.effect === 'frenzy') {
+        gameState.multiplier /= booster.value;
+    }
+    
+    booster.active = false;
+    booster.endTime = 0;
+    updateUI();
 }
 
 // Форматирование чисел
@@ -257,12 +527,30 @@ function formatNumber(num) {
     return (num / 1000000000).toFixed(1) + 'B';
 }
 
+// Форматирование времени
+function formatTime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+        return `${hours}:${String(minutes % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    }
+    return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
 // Обновление UI
 function updateUI() {
     // Обновление статистики
     document.getElementById('points').textContent = formatNumber(gameState.points);
-    document.getElementById('pointsPerSecond').textContent = formatNumber(gameState.pointsPerSecond);
+    document.getElementById('pointsPerSecond').textContent = formatNumber(gameState.pointsPerSecond * gameState.multiplier);
     document.getElementById('level').textContent = gameState.level;
+    document.getElementById('multiplier').textContent = 'x' + gameState.multiplier.toFixed(1);
+    document.getElementById('energy').textContent = Math.floor(gameState.energy) + '/' + gameState.maxEnergy;
+    
+    // Обновление энергии
+    const energyPercent = (gameState.energy / gameState.maxEnergy) * 100;
+    document.getElementById('energyFill').style.width = energyPercent + '%';
     
     // Обновление прогресс бара
     const requiredExp = getRequiredExperience(gameState.level);
@@ -271,14 +559,65 @@ function updateUI() {
     document.getElementById('currentProgress').textContent = formatNumber(gameState.experience);
     document.getElementById('nextLevelRequirement').textContent = formatNumber(requiredExp);
     
+    // Обновление таймера бонуса
+    updateBonusTimer();
+    
     // Обновление улучшений
     renderUpgrades();
+    
+    // Обновление бустеров
+    renderBoosters();
     
     // Обновление достижений
     renderAchievements();
     
     // Обновление статистики
     updateStats();
+}
+
+// Обновление таймера бонуса
+function updateBonusTimer() {
+    const now = Date.now();
+    const timeSinceBonus = now - gameState.lastBonusTime;
+    const bonusInterval = 60 * 60 * 1000; // 1 час
+    
+    if (timeSinceBonus >= bonusInterval) {
+        document.getElementById('bonusTimer').textContent = 'ГОТОВ!';
+        document.getElementById('bonusBtn').style.animation = 'pulse-bonus 0.5s ease-in-out infinite';
+    } else {
+        const timeLeft = bonusInterval - timeSinceBonus;
+        document.getElementById('bonusTimer').textContent = formatTime(timeLeft);
+    }
+}
+
+// Обработчик кнопки бонуса
+document.getElementById('bonusBtn').addEventListener('click', () => {
+    const now = Date.now();
+    const timeSinceBonus = now - gameState.lastBonusTime;
+    const bonusInterval = 60 * 60 * 1000; // 1 час
+    
+    if (timeSinceBonus >= bonusInterval) {
+        showBonusModal();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+});
+
+// Показ модального окна бонуса
+function showBonusModal() {
+    const bonusAmount = Math.floor(gameState.pointsPerSecond * 100 + gameState.level * 100);
+    document.getElementById('bonusAmount').textContent = '+' + formatNumber(bonusAmount) + ' 💎';
+    document.getElementById('bonusModal').classList.add('show');
+    
+    document.getElementById('claimBonus').onclick = () => {
+        gameState.points += bonusAmount;
+        gameState.totalEarned += bonusAmount;
+        gameState.lastBonusTime = Date.now();
+        document.getElementById('bonusModal').classList.remove('show');
+        tg.HapticFeedback.notificationOccurred('success');
+        updateUI();
+        saveGame();
+    };
 }
 
 // Рендер улучшений
@@ -293,9 +632,16 @@ function renderUpgrades() {
         const item = document.createElement('div');
         item.className = `upgrade-item ${canAfford ? 'affordable' : ''}`;
         
-        const profitText = upgrade.profitType === 'click' 
-            ? `+${upgrade.baseProfit} за клик`
-            : `+${upgrade.baseProfit}/сек`;
+        let profitText = '';
+        if (upgrade.profitType === 'click') {
+            profitText = `+${upgrade.baseProfit} за клик`;
+        } else if (upgrade.profitType === 'auto') {
+            profitText = `+${upgrade.baseProfit}/сек`;
+        } else if (upgrade.profitType === 'energy') {
+            profitText = `+${upgrade.baseProfit} энергии`;
+        } else if (upgrade.profitType === 'critical') {
+            profitText = `+${(upgrade.baseProfit * 100).toFixed(0)}% крит`;
+        }
         
         item.innerHTML = `
             <div class="upgrade-icon">${upgrade.icon}</div>
@@ -316,6 +662,39 @@ function renderUpgrades() {
     });
 }
 
+// Рендер бустеров
+function renderBoosters() {
+    const container = document.getElementById('boostersList');
+    container.innerHTML = '';
+    
+    gameState.boosters.forEach(booster => {
+        const canAfford = gameState.points >= booster.cost;
+        
+        const item = document.createElement('div');
+        item.className = `booster-item ${booster.active ? 'active' : ''} ${!canAfford && !booster.active ? 'disabled' : ''}`;
+        
+        let timerHTML = '';
+        if (booster.active) {
+            const timeLeft = Math.max(0, booster.endTime - Date.now());
+            timerHTML = `<div class="booster-timer">${formatTime(timeLeft)}</div>`;
+        }
+        
+        item.innerHTML = `
+            <div class="booster-icon">${booster.icon}</div>
+            <div class="booster-name">${booster.name}</div>
+            <div class="booster-description">${booster.description}</div>
+            <div class="booster-cost">${formatNumber(booster.cost)} 💎</div>
+            ${timerHTML}
+        `;
+        
+        if (!booster.active && canAfford) {
+            item.onclick = () => activateBooster(booster.id);
+        }
+        
+        container.appendChild(item);
+    });
+}
+
 // Рендер достижений
 function renderAchievements() {
     const container = document.getElementById('achievementsList');
@@ -323,13 +702,22 @@ function renderAchievements() {
     
     gameState.achievements.forEach(achievement => {
         const item = document.createElement('div');
-        item.className = `achievement-item ${achievement.unlocked ? 'unlocked' : ''}`;
+        item.className = `achievement-item ${achievement.unlocked ? 'unlocked' : ''} ${achievement.isNew ? 'new' : ''}`;
         
         item.innerHTML = `
             <div class="achievement-icon">${achievement.icon}</div>
             <div class="achievement-name">${achievement.name}</div>
             <div class="achievement-description">${achievement.description}</div>
         `;
+        
+        // Убрать метку NEW при клике
+        if (achievement.isNew) {
+            item.onclick = () => {
+                achievement.isNew = false;
+                item.classList.remove('new');
+                saveGame();
+            };
+        }
         
         container.appendChild(item);
     });
@@ -340,6 +728,8 @@ function updateStats() {
     document.getElementById('totalClicks').textContent = formatNumber(gameState.totalClicks);
     document.getElementById('totalEarned').textContent = formatNumber(gameState.totalEarned);
     document.getElementById('upgradesBought').textContent = gameState.upgradesBought;
+    document.getElementById('criticalHits').textContent = formatNumber(gameState.criticalHits);
+    document.getElementById('bestCombo').textContent = gameState.bestCombo;
     
     const playTime = Math.floor((Date.now() - gameState.startTime) / 60000);
     document.getElementById('playTime').textContent = playTime + ' мин';
@@ -357,13 +747,15 @@ document.querySelectorAll('.tab').forEach(tab => {
         // Добавление активного класса
         tab.classList.add('active');
         document.getElementById(tabName).classList.add('active');
+        
+        tg.HapticFeedback.impactOccurred('light');
     });
 });
 
 // Пассивный доход
 setInterval(() => {
     if (gameState.pointsPerSecond > 0) {
-        const earned = gameState.pointsPerSecond / 10; // 10 раз в секунду для плавности
+        const earned = (gameState.pointsPerSecond * gameState.multiplier) / 10;
         gameState.points += earned;
         gameState.totalEarned += earned;
         gameState.experience += earned;
@@ -372,34 +764,57 @@ setInterval(() => {
     }
 }, 100);
 
+// Восстановление энергии
+setInterval(() => {
+    if (gameState.energy < gameState.maxEnergy) {
+        gameState.energy = Math.min(gameState.maxEnergy, gameState.energy + (gameState.energyRegenRate / 10));
+        updateUI();
+    }
+}, 100);
+
+// Обновление таймеров бустеров
+setInterval(() => {
+    gameState.boosters.forEach(booster => {
+        if (booster.active && Date.now() >= booster.endTime) {
+            deactivateBooster(booster.id);
+        }
+    });
+    updateBonusTimer();
+}, 1000);
+
 // Автосохранение
 setInterval(() => {
     saveGame();
 }, 5000);
 
-// Инициализация игры
+// Закрытие модального окна при клике вне его
+document.getElementById('bonusModal').addEventListener('click', (e) => {
+    if (e.target.id === 'bonusModal') {
+        document.getElementById('bonusModal').classList.remove('show');
+    }
+});
+
+// Инициализация игры при загрузке
 loadGame();
 updateUI();
 
-// Добавление градиента для SVG
-// Добавление градиента для SVG
-const svgDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-gradient.setAttribute('id', 'crystalGradient');
-gradient.setAttribute('x1', '0%');
-gradient.setAttribute('y1', '0%');
-gradient.setAttribute('x2', '0%');
-gradient.setAttribute('y2', '100%');
+// Отправка данных в бота (опционально)
+function sendDataToBot() {
+    const data = {
+        action: 'save_progress',
+        points: gameState.points,
+        level: gameState.level,
+        totalClicks: gameState.totalClicks
+    };
+    
+    tg.sendData(JSON.stringify(data));
+}
 
-const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-stop1.setAttribute('offset', '0%');
-stop1.setAttribute('style', 'stop-color:#8b6bb8;stop-opacity:1');
+// Кнопка в Telegram для отправки данных
+tg.MainButton.text = "Сохранить прогресс";
+tg.MainButton.onClick(sendDataToBot);
 
-const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-stop2.setAttribute('offset', '100%');
-stop2.setAttribute('style', 'stop-color:#6b4e9e;stop-opacity:1');
-
-gradient.appendChild(stop1);
-gradient.appendChild(stop2);
-svgDefs.appendChild(gradient);
-document.querySelector('.crystal-svg').prepend(svgDefs);
+// Показать кнопку если есть прогресс
+if (gameState.level > 1) {
+    tg.MainButton.show();
+}
