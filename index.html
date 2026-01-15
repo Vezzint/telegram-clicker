@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Dark Clicker</title>
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=4.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body class="theme-dark">
@@ -24,13 +24,17 @@
                 </button>
             </div>
             <div class="stats">
-                <div class="stat-item balance-display">
-                    <div class="stat-label">💎 Баланс</div>
-                    <div class="stat-value" id="points">0</div>
+                <div class="stat-item balance-display coins">
+                    <div class="stat-label">💰 Монеты</div>
+                    <div class="stat-value" id="coins">0</div>
+                </div>
+                <div class="stat-item balance-display gems">
+                    <div class="stat-label">💎 Гемы</div>
+                    <div class="stat-value" id="gems">0</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">В секунду</div>
-                    <div class="stat-value" id="pointsPerSecond">0</div>
+                    <div class="stat-value" id="coinsPerSecond">0</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Множитель</div>
@@ -39,6 +43,10 @@
                 <div class="stat-item">
                     <div class="stat-label">Энергия</div>
                     <div class="stat-value" id="energy">100/100</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Удача</div>
+                    <div class="stat-value" id="luckValue">0%</div>
                 </div>
             </div>
         </div>
@@ -88,6 +96,8 @@
         <div class="tabs">
             <button class="tab active" data-tab="upgrades">⚡ Улучшения</button>
             <button class="tab" data-tab="boosters">🚀 Бустеры</button>
+            <button class="tab" data-tab="prestige">✨ Престиж</button>
+            <button class="tab" data-tab="shop">🏪 Магазин</button>
             <button class="tab" data-tab="achievements">🏆 Награды</button>
             <button class="tab" data-tab="stats">📊 Статистика</button>
         </div>
@@ -99,6 +109,32 @@
 
             <div class="tab-pane" id="boosters">
                 <div class="boosters-grid" id="boostersList"></div>
+            </div>
+
+            <div class="tab-pane" id="prestige">
+                <div class="prestige-container">
+                    <h3>✨ Система престижа</h3>
+                    <p>Сбросьте прогресс для получения престижных очков</p>
+                    <div class="prestige-info">
+                        <div class="prestige-stat">
+                            <span>Престижных очков:</span>
+                            <span id="prestigePoints">0</span>
+                        </div>
+                        <div class="prestige-stat">
+                            <span>Получите при сбросе:</span>
+                            <span id="prestigeGain">0</span>
+                        </div>
+                        <div class="prestige-stat">
+                            <span>Бонус к доходу:</span>
+                            <span id="prestigeBonus">+0%</span>
+                        </div>
+                    </div>
+                    <button class="prestige-btn" id="prestigeBtn">Сделать престиж</button>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="shop">
+                <div class="shop-grid" id="shopList"></div>
             </div>
 
             <div class="tab-pane" id="achievements">
@@ -135,6 +171,10 @@
                         <span>Собрано наград:</span>
                         <span id="achievementsUnlocked">0</span>
                     </div>
+                    <div class="stat-row">
+                        <span>Гемов найдено:</span>
+                        <span id="gemsFound">0</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -143,7 +183,10 @@
     <div class="modal" id="bonusModal">
         <div class="modal-content">
             <h2>🎁 Ежечасный бонус!</h2>
-            <div class="bonus-amount" id="bonusAmount">+1000 💎</div>
+            <div class="bonus-rewards">
+                <div class="bonus-amount" id="bonusCoins">+1000 💰</div>
+                <div class="bonus-amount gems" id="bonusGems">+10 💎</div>
+            </div>
             <button class="claim-btn" id="claimBonus">Забрать</button>
         </div>
     </div>
@@ -153,7 +196,10 @@
             <h2>🎉 Достижение!</h2>
             <div class="achievement-popup-icon" id="achievementPopupIcon">🏆</div>
             <div class="achievement-popup-name" id="achievementPopupName">Новое достижение</div>
-            <div class="achievement-popup-reward" id="achievementPopupReward">+100 💎</div>
+            <div class="achievement-popup-rewards">
+                <div class="achievement-popup-reward" id="achievementPopupCoins">+100 💰</div>
+                <div class="achievement-popup-reward gems" id="achievementPopupGems">+5 💎</div>
+            </div>
             <button class="claim-btn" id="claimAchievement">Забрать награду</button>
         </div>
     </div>
@@ -162,11 +208,23 @@
         <div class="modal-content level-up-popup">
             <h2>⭐ Новый уровень!</h2>
             <div class="level-up-number" id="levelUpNumber">2</div>
-            <div class="level-up-reward" id="levelUpReward">+500 💎</div>
+            <div class="level-up-rewards">
+                <div class="level-up-reward" id="levelUpCoins">+500 💰</div>
+                <div class="level-up-reward gems" id="levelUpGems">+5 💎</div>
+            </div>
             <button class="claim-btn" id="closeLevelUp">Продолжить</button>
         </div>
     </div>
 
-    <script src="script.js?v=3.0"></script>
+    <div class="modal" id="gemDropModal">
+        <div class="modal-content gem-drop-popup">
+            <h2>💎 Редкая находка!</h2>
+            <div class="gem-drop-icon">💎</div>
+            <div class="gem-drop-amount" id="gemDropAmount">+1 Гем</div>
+            <button class="claim-btn" id="closeGemDrop">Забрать</button>
+        </div>
+    </div>
+
+    <script src="script.js?v=4.0"></script>
 </body>
 </html>
