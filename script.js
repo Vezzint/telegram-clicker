@@ -1,5 +1,5 @@
 // Проверка версии и принудительное обновление
-const GAME_VERSION = '2.1';
+const GAME_VERSION = '2.2';
 const savedVersion = localStorage.getItem('gameVersion');
 
 if (savedVersion !== GAME_VERSION) {
@@ -20,31 +20,30 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
-// Получение данных пользователя из URL
-function getUserDataFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const userParam = urlParams.get('user');
+// Получение данных пользователя из Telegram
+function getUserData() {
+    console.log('Telegram WebApp initData:', tg.initDataUnsafe);
     
-    if (userParam) {
-        try {
-            const userJson = atob(userParam);
-            return JSON.parse(userJson);
-        } catch (e) {
-            console.error('Error parsing user data:', e);
-        }
-    }
-    
-    // Fallback на данные из Telegram Web App
-    if (tg.initDataUnsafe.user) {
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        console.log('User data:', user);
+        
         return {
-            id: tg.initDataUnsafe.user.id,
-            first_name: tg.initDataUnsafe.user.first_name,
-            username: tg.initDataUnsafe.user.username || '',
-            avatar: ''
+            id: user.id,
+            first_name: user.first_name || 'Player',
+            last_name: user.last_name || '',
+            username: user.username || '',
+            photo_url: user.photo_url || ''
         };
     }
     
-    return null;
+    return {
+        id: 0,
+        first_name: 'Player',
+        last_name: '',
+        username: '',
+        photo_url: ''
+    };
 }
 
 // Игровое состояние
@@ -227,36 +226,51 @@ function initializeGame() {
     initializeAchievements();
     initializeBoosters();
     
-    // Получаем данные пользователя
-    const userData = getUserDataFromURL();
+    // Получаем данные пользователя из Telegram
+    const userData = getUserData();
+    console.log('Setting user data:', userData);
     
-    if (userData) {
-        document.getElementById('username').textContent = userData.first_name;
+    // Устанавливаем имя
+    const usernameElement = document.getElementById('username');
+    if (userData.username) {
+        usernameElement.textContent = '@' + userData.username;
+    } else {
+        usernameElement.textContent = userData.first_name;
+    }
+    
+    // Устанавливаем аватарку
+    const avatarElement = document.getElementById('userAvatar');
+    
+    if (userData.photo_url) {
+        console.log('Loading photo from:', userData.photo_url);
+        avatarElement.src = userData.photo_url;
+        avatarElement.style.display = 'block';
         
-        const avatarElement = document.getElementById('userAvatar');
-        if (userData.avatar) {
-            avatarElement.src = userData.avatar;
-            avatarElement.onerror = function() {
-                // Если фото не загрузилось, показываем эмодзи
-                this.style.display = 'none';
-                const fallback = document.createElement('div');
-                fallback.className = 'avatar';
-                fallback.textContent = '👤';
-                fallback.style.fontSize = '24px';
-                this.parentNode.replaceChild(fallback, this);
-            };
-        } else {
-            // Нет аватарки - показываем эмодзи
-            avatarElement.style.display = 'none';
+        avatarElement.onerror = function() {
+            console.log('Photo failed to load, using fallback');
+            this.style.display = 'none';
             const fallback = document.createElement('div');
             fallback.className = 'avatar';
-            fallback.textContent = '👤';
+            fallback.textContent = userData.first_name.charAt(0).toUpperCase();
             fallback.style.fontSize = '24px';
-            avatarElement.parentNode.replaceChild(fallback, avatarElement);
-        }
+            fallback.style.display = 'flex';
+            fallback.style.alignItems = 'center';
+            fallback.style.justifyContent = 'center';
+            this.parentNode.replaceChild(fallback, this);
+        };
+    } else {
+        console.log('No photo URL, using first letter');
+        avatarElement.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'avatar';
+        fallback.textContent = userData.first_name.charAt(0).toUpperCase();
+        fallback.style.fontSize = '24px';
+        fallback.style.display = 'flex';
+        fallback.style.alignItems = 'center';
+        fallback.style.justifyContent = 'center';
+        avatarElement.parentNode.replaceChild(fallback, avatarElement);
     }
 }
-
 
 function initializeUpgrades() {
     gameState.upgrades = upgradeDefinitions.map(def => ({
@@ -561,6 +575,7 @@ function formatTime(ms) {
     }
     return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
 }
+
 function updateUI() {
     document.getElementById('points').textContent = formatNumber(gameState.points);
     document.getElementById('pointsPerSecond').textContent = formatNumber(gameState.pointsPerSecond * gameState.multiplier);
@@ -807,4 +822,3 @@ tg.MainButton.onClick(sendDataToBot);
 if (gameState.level > 1) {
     tg.MainButton.show();
 }
-
