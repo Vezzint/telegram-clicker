@@ -1,22 +1,49 @@
-const GAME_VERSION = '2.3';
+const GAME_VERSION = '2.4';
 const savedVersion = localStorage.getItem('gameVersion');
 
 if (savedVersion !== GAME_VERSION) {
     console.log('Обновление игры до версии ' + GAME_VERSION);
     localStorage.setItem('gameVersion', GAME_VERSION);
-    
     if ('caches' in window) {
         caches.keys().then(names => {
             names.forEach(name => caches.delete(name));
         });
     }
-    
     window.location.reload(true);
 }
 
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
+
+function getUserDataFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    
+    if (userParam) {
+        try {
+            const userJson = atob(userParam);
+            const userData = JSON.parse(userJson);
+            console.log('Загружены данные пользователя:', userData);
+            return userData;
+        } catch (e) {
+            console.error('Ошибка парсинга данных пользователя:', e);
+        }
+    }
+    
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        return {
+            id: user.id,
+            first_name: user.first_name || 'Player',
+            last_name: user.last_name || '',
+            username: user.username || '',
+            avatar: ''
+        };
+    }
+    
+    return null;
+}
 
 let gameState = {
     points: 0,
@@ -85,18 +112,40 @@ function initializeGame() {
     initializeAchievements();
     initializeBoosters();
     
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        const user = tg.initDataUnsafe.user;
-        const usernameElement = document.getElementById('username');
+    const userData = getUserDataFromURL();
+    
+    if (userData) {
+        console.log('Установка данных пользователя:', userData);
         
-        if (user.username) {
-            usernameElement.textContent = '@' + user.username;
-        } else {
-            usernameElement.textContent = user.first_name || 'Player';
+        const usernameElement = document.getElementById('username');
+        if (userData.username) {
+            usernameElement.textContent = '@' + userData.username;
+        } else if (userData.first_name) {
+            usernameElement.textContent = userData.first_name;
         }
         
-        const avatarElement = document.getElementById('userAvatar');
-        avatarElement.textContent = (user.first_name || 'P').charAt(0).toUpperCase();
+        const avatarImg = document.getElementById('userAvatar');
+        
+        if (userData.avatar && userData.avatar.length > 0) {
+            console.log('Установка аватарки из base64');
+            avatarImg.src = userData.avatar;
+            avatarImg.style.display = 'block';
+            avatarImg.onerror = function() {
+                console.log('Ошибка загрузки аватарки');
+                this.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'avatar';
+                fallback.textContent = (userData.first_name || 'P').charAt(0).toUpperCase();
+                this.parentNode.replaceChild(fallback, this);
+            };
+        } else {
+            console.log('Аватарка отсутствует, показываем букву');
+            avatarImg.style.display = 'none';
+            const fallback = document.createElement('div');
+            fallback.className = 'avatar';
+            fallback.textContent = (userData.first_name || 'P').charAt(0).toUpperCase();
+            avatarImg.parentNode.replaceChild(fallback, avatarImg);
+        }
     }
 }
 
