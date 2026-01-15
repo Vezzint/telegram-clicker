@@ -17,7 +17,7 @@ tg.ready();
 
 function getUserIdFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('uid') || null;
+    return urlParams.get('uid') || 'local';
 }
 
 const USER_ID = getUserIdFromURL();
@@ -59,34 +59,25 @@ let gameState = {
 };
 
 const upgradeDefinitions = [
-    // Улучшения клика
     { id: 'cursor1', name: 'Магический курсор', icon: '👆', description: 'Увеличивает силу клика', baseCost: 10, baseProfit: 1, profitType: 'click', costMultiplier: 1.15 },
     { id: 'cursor2', name: 'Усиленный курсор', icon: '✨', description: 'Еще больше силы клика', baseCost: 50, baseProfit: 3, profitType: 'click', costMultiplier: 1.16 },
     { id: 'cursor3', name: 'Мощный курсор', icon: '💫', description: 'Огромная сила клика', baseCost: 250, baseProfit: 10, profitType: 'click', costMultiplier: 1.17 },
     { id: 'cursor4', name: 'Божественный курсор', icon: '⚡', description: 'Невероятная сила', baseCost: 1200, baseProfit: 40, profitType: 'click', costMultiplier: 1.18 },
     { id: 'cursor5', name: 'Космический курсор', icon: '🌟', description: 'Абсолютная сила', baseCost: 6000, baseProfit: 150, profitType: 'click', costMultiplier: 1.19 },
-    
-    // Энергия
     { id: 'energy1', name: 'Кристалл энергии', icon: '🔋', description: '+20 макс. энергии', baseCost: 30, baseProfit: 20, profitType: 'energy', costMultiplier: 1.2 },
     { id: 'energy2', name: 'Энергетический усилитель', icon: '⚡', description: '+50 макс. энергии', baseCost: 200, baseProfit: 50, profitType: 'energy', costMultiplier: 1.22 },
     { id: 'energy3', name: 'Реактор энергии', icon: '🔆', description: '+100 макс. энергии', baseCost: 1000, baseProfit: 100, profitType: 'energy', costMultiplier: 1.24 },
     { id: 'regen1', name: 'Регенерация I', icon: '♻️', description: '+1 реген/сек', baseCost: 100, baseProfit: 1, profitType: 'regen', costMultiplier: 1.25 },
     { id: 'regen2', name: 'Регенерация II', icon: '🌀', description: '+2 реген/сек', baseCost: 500, baseProfit: 2, profitType: 'regen', costMultiplier: 1.27 },
     { id: 'regen3', name: 'Регенерация III', icon: '💠', description: '+5 реген/сек', baseCost: 2500, baseProfit: 5, profitType: 'regen', costMultiplier: 1.29 },
-    
-    // Криты
     { id: 'crit1', name: 'Око удачи', icon: '🎯', description: '+2% шанс крита', baseCost: 150, baseProfit: 0.02, profitType: 'critical', costMultiplier: 1.3 },
     { id: 'crit2', name: 'Божественная меткость', icon: '🎲', description: '+3% шанс крита', baseCost: 800, baseProfit: 0.03, profitType: 'critical', costMultiplier: 1.32 },
     { id: 'crit3', name: 'Абсолютная точность', icon: '🍀', description: '+5% шанс крита', baseCost: 4000, baseProfit: 0.05, profitType: 'critical', costMultiplier: 1.34 },
     { id: 'critMulti1', name: 'Критическая сила I', icon: '💥', description: '+1x крит урон', baseCost: 1000, baseProfit: 1, profitType: 'critMulti', costMultiplier: 1.4 },
     { id: 'critMulti2', name: 'Критическая сила II', icon: '💢', description: '+2x крит урон', baseCost: 5000, baseProfit: 2, profitType: 'critMulti', costMultiplier: 1.45 },
-    
-    // Удача (шанс дропа гемов)
     { id: 'luck1', name: 'Четырехлистный клевер', icon: '🍀', description: '+1% удача', baseCost: 500, baseProfit: 0.01, profitType: 'luck', costMultiplier: 1.35 },
     { id: 'luck2', name: 'Амулет удачи', icon: '🎰', description: '+2% удача', baseCost: 2500, baseProfit: 0.02, profitType: 'luck', costMultiplier: 1.38 },
     { id: 'luck3', name: 'Благословение фортуны', icon: '🌈', description: '+5% удача', baseCost: 12000, baseProfit: 0.05, profitType: 'luck', costMultiplier: 1.42 },
-    
-    // Пассивный доход
     { id: 'auto1', name: 'Младший маг', icon: '🧙', description: 'Генерирует 1/сек', baseCost: 50, baseProfit: 1, profitType: 'auto', costMultiplier: 1.18 },
     { id: 'auto2', name: 'Кристальная шахта', icon: '⛏️', description: 'Генерирует 5/сек', baseCost: 250, baseProfit: 5, profitType: 'auto', costMultiplier: 1.2 },
     { id: 'auto3', name: 'Портал энергии', icon: '🌀', description: 'Генерирует 20/сек', baseCost: 1200, baseProfit: 20, profitType: 'auto', costMultiplier: 1.22 },
@@ -117,62 +108,23 @@ const shopDefinitions = [
     { id: 'gem_pack_2', name: 'Средний пакет гемов', icon: '💎', description: '50 гемов', cost: 450, reward: 50, type: 'gems' },
     { id: 'gem_pack_3', name: 'Большой пакет гемов', icon: '💎', description: '150 гемов', cost: 1200, reward: 150, type: 'gems' },
     { id: 'gem_pack_4', name: 'Огромный пакет гемов', icon: '💎', description: '500 гемов', cost: 3500, reward: 500, type: 'gems' },
-    { id: 'gem_pack_5', name: 'Легендарный пакет', icon: '💎', description: '2000 гемов', cost: 12000, reward: 2000, type: 'gems' },
-    { id: 'prestige_boost', name: 'Ускоритель престижа', icon: '✨', description: '+10% к престижным очкам', cost: 100, reward: 0.1, type: 'prestige_multi', permanent: true }
+    { id: 'gem_pack_5', name: 'Легендарный пакет', icon: '💎', description: '2000 гемов', cost: 12000, reward: 2000, type: 'gems' }
 ];
 
 const achievementDefinitions = [
-    // Клики
     { id: 'clicks_10', icon: '👆', name: 'Новичок', description: '10 кликов', requirement: 10, type: 'clicks', coinReward: 10, gemReward: 1 },
     { id: 'clicks_50', icon: '👍', name: 'Активный', description: '50 кликов', requirement: 50, type: 'clicks', coinReward: 50, gemReward: 2 },
     { id: 'clicks_100', icon: '✨', name: 'Кликер', description: '100 кликов', requirement: 100, type: 'clicks', coinReward: 100, gemReward: 3 },
     { id: 'clicks_500', icon: '💪', name: 'Профи', description: '500 кликов', requirement: 500, type: 'clicks', coinReward: 500, gemReward: 5 },
     { id: 'clicks_1000', icon: '⚡', name: 'Мастер', description: '1000 кликов', requirement: 1000, type: 'clicks', coinReward: 1000, gemReward: 10 },
-    { id: 'clicks_5000', icon: '🔥', name: 'Эксперт', description: '5000 кликов', requirement: 5000, type: 'clicks', coinReward: 5000, gemReward: 25 },
-    { id: 'clicks_10000', icon: '🌟', name: 'Легенда', description: '10000 кликов', requirement: 10000, type: 'clicks', coinReward: 10000, gemReward: 50 },
-    { id: 'clicks_50000', icon: '💫', name: 'Титан', description: '50000 кликов', requirement: 50000, type: 'clicks', coinReward: 50000, gemReward: 100 },
-    
-    // Монеты
     { id: 'coins_100', icon: '💰', name: 'Первые деньги', description: '100 монет', requirement: 100, type: 'coins', coinReward: 50, gemReward: 2 },
     { id: 'coins_1000', icon: '💵', name: 'Тысячник', description: '1000 монет', requirement: 1000, type: 'coins', coinReward: 500, gemReward: 5 },
-    { id: 'coins_10000', icon: '💸', name: 'Богач', description: '10000 монет', requirement: 10000, type: 'coins', coinReward: 5000, gemReward: 15 },
-    { id: 'coins_100000', icon: '👑', name: 'Магнат', description: '100000 монет', requirement: 100000, type: 'coins', coinReward: 50000, gemReward: 50 },
-    { id: 'coins_1000000', icon: '🏆', name: 'Миллионер', description: '1000000 монет', requirement: 1000000, type: 'coins', coinReward: 500000, gemReward: 150 },
-    
-    // Уровни
     { id: 'level_5', icon: '⭐', name: 'Звезда', description: 'Уровень 5', requirement: 5, type: 'level', coinReward: 200, gemReward: 5 },
     { id: 'level_10', icon: '💫', name: 'Супер звезда', description: 'Уровень 10', requirement: 10, type: 'level', coinReward: 500, gemReward: 10 },
-    { id: 'level_20', icon: '🌠', name: 'Сияние', description: 'Уровень 20', requirement: 20, type: 'level', coinReward: 1500, gemReward: 20 },
-    { id: 'level_30', icon: '✨', name: 'Небесный', description: 'Уровень 30', requirement: 30, type: 'level', coinReward: 4000, gemReward: 35 },
-    { id: 'level_50', icon: '🌌', name: 'Космический', description: 'Уровень 50', requirement: 50, type: 'level', coinReward: 12000, gemReward: 60 },
-    { id: 'level_75', icon: '🔮', name: 'Магический', description: 'Уровень 75', requirement: 75, type: 'level', coinReward: 30000, gemReward: 100 },
-    { id: 'level_100', icon: '👑', name: 'Владыка', description: 'Уровень 100', requirement: 100, type: 'level', coinReward: 100000, gemReward: 200 },
-    
-    // Улучшения
     { id: 'upgrades_5', icon: '🎯', name: 'Улучшатель', description: '5 улучшений', requirement: 5, type: 'upgrades', coinReward: 100, gemReward: 3 },
-    { id: 'upgrades_10', icon: '🎪', name: 'Коллекционер', description: '10 улучшений', requirement: 10, type: 'upgrades', coinReward: 300, gemReward: 7 },
-    { id: 'upgrades_25', icon: '🚀', name: 'Энтузиаст', description: '25 улучшений', requirement: 25, type: 'upgrades', coinReward: 1000, gemReward: 15 },
-    { id: 'upgrades_50', icon: '🌈', name: 'Мастер улучшений', description: '50 улучшений', requirement: 50, type: 'upgrades', coinReward: 5000, gemReward: 35 },
-    { id: 'upgrades_100', icon: '💎', name: 'Перфекционист', description: '100 улучшений', requirement: 100, type: 'upgrades', coinReward: 20000, gemReward: 80 },
-    
-    // Гемы
     { id: 'gems_10', icon: '💎', name: 'Первые гемы', description: '10 гемов', requirement: 10, type: 'gems', coinReward: 500, gemReward: 5 },
-    { id: 'gems_50', icon: '💎', name: 'Коллектор гемов', description: '50 гемов', requirement: 50, type: 'gems', coinReward: 2500, gemReward: 15 },
-    { id: 'gems_100', icon: '💎', name: 'Хранитель гемов', description: '100 гемов', requirement: 100, type: 'gems', coinReward: 10000, gemReward: 30 },
-    { id: 'gems_500', icon: '💎', name: 'Владыка гемов', description: '500 гемов', requirement: 500, type: 'gems', coinReward: 50000, gemReward: 100 },
-    
-    // Комбо
     { id: 'combo_10', icon: '🔥', name: 'Горячие руки', description: 'Комбо x10', requirement: 10, type: 'combo', coinReward: 200, gemReward: 3 },
-    { id: 'combo_25', icon: '⚡', name: 'Скоростной', description: 'Комбо x25', requirement: 25, type: 'combo', coinReward: 600, gemReward: 7 },
-    { id: 'combo_50', icon: '💥', name: 'Безумие', description: 'Комбо x50', requirement: 50, type: 'combo', coinReward: 1500, gemReward: 15 },
-    { id: 'combo_100', icon: '🌪️', name: 'Ураган', description: 'Комбо x100', requirement: 100, type: 'combo', coinReward: 5000, gemReward: 35 },
-    { id: 'combo_250', icon: '🌀', name: 'Торнадо', description: 'Комбо x250', requirement: 250, type: 'combo', coinReward: 15000, gemReward: 75 },
-    
-    // Криты
-    { id: 'critical_50', icon: '🎯', name: 'Снайпер', description: '50 критов', requirement: 50, type: 'critical', coinReward: 500, gemReward: 5 },
-    { id: 'critical_250', icon: '🎲', name: 'Везунчик', description: '250 критов', requirement: 250, type: 'critical', coinReward: 2500, gemReward: 15 },
-    { id: 'critical_1000', icon: '🍀', name: 'Удачливый', description: '1000 критов', requirement: 1000, type: 'critical', coinReward: 10000, gemReward: 40 },
-    { id: 'critical_5000', icon: '✨', name: 'Мастер критов', description: '5000 критов', requirement: 5000, type: 'critical', coinReward: 50000, gemReward: 100 }
+    { id: 'critical_50', icon: '🎯', name: 'Снайпер', description: '50 критов', requirement: 50, type: 'critical', coinReward: 500, gemReward: 5 }
 ];
 
 const themes = {
@@ -180,6 +132,7 @@ const themes = {
     60: 'ice', 70: 'nature', 80: 'sunset', 90: 'electric', 100: 'blood',
     120: 'shadow', 140: 'neon', 160: 'earth', 180: 'sky'
 };
+
 function initializeGame() {
     initializeUpgrades();
     initializeAchievements();
@@ -189,13 +142,11 @@ function initializeGame() {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         const user = tg.initDataUnsafe.user;
         const usernameElement = document.getElementById('username');
-        
         if (user.username) {
             usernameElement.textContent = '@' + user.username;
         } else {
             usernameElement.textContent = user.first_name || 'Player';
         }
-        
         const avatarElement = document.getElementById('userAvatar');
         avatarElement.textContent = (user.first_name || 'P').charAt(0).toUpperCase();
     }
@@ -220,36 +171,35 @@ function initializeShop() {
 function loadGame() {
     const saved = localStorage.getItem('darkClickerSave_' + USER_ID);
     if (saved) {
-        const savedState = JSON.parse(saved);
-        gameState = { ...gameState, ...savedState };
-        initializeUpgrades();
-        initializeAchievements();
-        initializeBoosters();
-        initializeShop();
-        
-        if (savedState.upgrades) {
-            savedState.upgrades.forEach((savedUpgrade, index) => {
-                if (gameState.upgrades[index]) gameState.upgrades[index].level = savedUpgrade.level;
-            });
+        try {
+            const savedState = JSON.parse(saved);
+            Object.assign(gameState, savedState);
+            
+            initializeUpgrades();
+            initializeAchievements();
+            initializeBoosters();
+            initializeShop();
+            
+            if (savedState.upgrades) {
+                savedState.upgrades.forEach((savedUpgrade, index) => {
+                    if (gameState.upgrades[index]) gameState.upgrades[index].level = savedUpgrade.level;
+                });
+            }
+            if (savedState.achievements) {
+                savedState.achievements.forEach((savedAch, index) => {
+                    if (gameState.achievements[index]) {
+                        gameState.achievements[index].unlocked = savedAch.unlocked;
+                        gameState.achievements[index].claimed = savedAch.claimed;
+                    }
+                });
+            }
+            
+            recalculateStats();
+            updateTheme();
+        } catch (e) {
+            console.error('Ошибка загрузки:', e);
+            initializeGame();
         }
-        if (savedState.achievements) {
-            savedState.achievements.forEach((savedAch, index) => {
-                if (gameState.achievements[index]) {
-                    gameState.achievements[index].unlocked = savedAch.unlocked;
-                    gameState.achievements[index].claimed = savedAch.claimed;
-                }
-            });
-        }
-        if (savedState.shopItems) {
-            savedState.shopItems.forEach((savedItem, index) => {
-                if (gameState.shopItems[index]) {
-                    gameState.shopItems[index].purchased = savedItem.purchased;
-                }
-            });
-        }
-        
-        recalculateStats();
-        updateTheme();
     } else {
         initializeGame();
     }
@@ -263,7 +213,6 @@ function recalculateStats() {
     gameState.criticalChance = 0.05;
     gameState.criticalMultiplier = 2;
     gameState.luck = 0;
-    gameState.gemDropChance = 0.01;
     
     gameState.upgrades.forEach(upgrade => {
         for (let i = 0; i < upgrade.level; i++) {
@@ -277,9 +226,7 @@ function recalculateStats() {
         }
     });
     
-    gameState.gemDropChance += gameState.luck;
-    
-    // Престиж бонус
+    gameState.gemDropChance = 0.01 + gameState.luck;
     const prestigeBonus = 1 + (gameState.prestigePoints * 0.1);
     gameState.coinsPerClick = Math.floor(gameState.coinsPerClick * prestigeBonus);
     gameState.coinsPerSecond = Math.floor(gameState.coinsPerSecond * prestigeBonus);
@@ -288,14 +235,12 @@ function recalculateStats() {
 function updateTheme() {
     const themeKeys = Object.keys(themes).map(Number).sort((a, b) => b - a);
     let newTheme = 'dark';
-    
     for (const level of themeKeys) {
         if (gameState.level >= level) {
             newTheme = themes[level];
             break;
         }
     }
-    
     if (newTheme !== gameState.theme) {
         gameState.theme = newTheme;
         document.body.className = 'theme-' + newTheme;
@@ -306,20 +251,89 @@ function saveGame() {
     localStorage.setItem('darkClickerSave_' + USER_ID, JSON.stringify(gameState));
 }
 
-function syncWithServer() {
-    if (!USER_ID) return;
-    
-    const data = {
-        action: 'save_progress',
-        coins: Math.floor(gameState.coins),
-        gems: Math.floor(gameState.gems),
-        level: gameState.level,
-        totalClicks: gameState.totalClicks,
-        totalEarned: Math.floor(gameState.totalEarned),
-        gameState: gameState
-    };
-    
-    tg.sendData(JSON.stringify(data));
+// ВАЖНО: Делаем функции глобальными
+window.buyUpgrade = function(upgradeId) {
+    const upgrade = gameState.upgrades.find(u => u.id === upgradeId);
+    if (!upgrade) return;
+    const cost = getUpgradeCost(upgrade);
+    if (gameState.coins >= cost) {
+        gameState.coins -= cost;
+        upgrade.level++;
+        gameState.upgradesBought++;
+        
+        if (upgrade.profitType === 'click') gameState.coinsPerClick += upgrade.baseProfit;
+        else if (upgrade.profitType === 'auto') gameState.coinsPerSecond += upgrade.baseProfit;
+        else if (upgrade.profitType === 'energy') gameState.maxEnergy += upgrade.baseProfit;
+        else if (upgrade.profitType === 'regen') gameState.energyRegenRate += upgrade.baseProfit;
+        else if (upgrade.profitType === 'critical') gameState.criticalChance += upgrade.baseProfit;
+        else if (upgrade.profitType === 'critMulti') gameState.criticalMultiplier += upgrade.baseProfit;
+        else if (upgrade.profitType === 'luck') {
+            gameState.luck += upgrade.baseProfit;
+            gameState.gemDropChance += upgrade.baseProfit;
+        }
+        
+        tg.HapticFeedback.impactOccurred('medium');
+        checkAchievements();
+        updateUI();
+        saveGame();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+};
+
+window.activateBooster = function(boosterId) {
+    const booster = gameState.boosters.find(b => b.id === boosterId);
+    if (!booster || booster.active) return;
+    if (gameState.gems >= booster.cost) {
+        gameState.gems -= booster.cost;
+        if (booster.effect === 'energy') {
+            gameState.energy = gameState.maxEnergy;
+            tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            booster.active = true;
+            booster.endTime = Date.now() + booster.duration;
+            if (booster.effect === 'multiplier' || booster.effect === 'frenzy' || booster.effect === 'godmode') {
+                gameState.multiplier *= booster.value;
+            }
+            tg.HapticFeedback.notificationOccurred('success');
+            setTimeout(() => deactivateBooster(boosterId), booster.duration);
+        }
+        updateUI();
+        saveGame();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+};
+
+window.buyShopItem = function(itemId) {
+    const item = gameState.shopItems.find(i => i.id === itemId);
+    if (!item) return;
+    if (gameState.coins >= item.cost) {
+        gameState.coins -= item.cost;
+        if (item.type === 'gems') {
+            gameState.gems += item.reward;
+        }
+        tg.HapticFeedback.impactOccurred('medium');
+        updateUI();
+        saveGame();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+};
+
+function deactivateBooster(boosterId) {
+    const booster = gameState.boosters.find(b => b.id === boosterId);
+    if (!booster || !booster.active) return;
+    if (booster.effect === 'multiplier' || booster.effect === 'frenzy' || booster.effect === 'godmode') {
+        gameState.multiplier /= booster.value;
+    }
+    booster.active = false;
+    booster.endTime = 0;
+    updateUI();
+}
+
+function getUpgradeCost(upgrade) {
+    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level));
 }
 
 document.getElementById('crystalButton').addEventListener('click', (e) => {
@@ -336,11 +350,8 @@ document.getElementById('crystalButton').addEventListener('click', (e) => {
     const isCritical = Math.random() < gameState.criticalChance;
     let coins = gameState.coinsPerClick * gameState.multiplier;
     
-    // Проверка на активный godmode
     const godmode = gameState.boosters.find(b => b.id === 'godmode' && b.active);
-    if (godmode) {
-        coins *= godmode.value;
-    }
+    if (godmode) coins *= godmode.value;
     
     if (isCritical) {
         coins *= gameState.criticalMultiplier;
@@ -357,7 +368,6 @@ document.getElementById('crystalButton').addEventListener('click', (e) => {
     gameState.totalClicks++;
     gameState.experience += coins;
     
-    // Шанс дропа гема
     const luckBooster = gameState.boosters.find(b => b.id === 'luck_boost' && b.active);
     let gemChance = gameState.gemDropChance;
     if (luckBooster) gemChance *= luckBooster.value;
@@ -381,10 +391,7 @@ document.getElementById('crystalButton').addEventListener('click', (e) => {
 function showGemDrop(amount) {
     document.getElementById('gemDropAmount').textContent = '+' + amount + ' ' + (amount === 1 ? 'Гем' : 'Гема');
     document.getElementById('gemDropModal').classList.add('show');
-    
-    setTimeout(() => {
-        document.getElementById('gemDropModal').classList.remove('show');
-    }, 2000);
+    setTimeout(() => document.getElementById('gemDropModal').classList.remove('show'), 2000);
 }
 
 document.getElementById('closeGemDrop').addEventListener('click', () => {
@@ -495,105 +502,9 @@ function showAchievementModal(achievement) {
     };
 }
 
-function buyUpgrade(upgradeId) {
-    const upgrade = gameState.upgrades.find(u => u.id === upgradeId);
-    if (!upgrade) return;
-    const cost = getUpgradeCost(upgrade);
-    if (gameState.coins >= cost) {
-        gameState.coins -= cost;
-        upgrade.level++;
-        gameState.upgradesBought++;
-        
-        if (upgrade.profitType === 'click') gameState.coinsPerClick += upgrade.baseProfit;
-        else if (upgrade.profitType === 'auto') gameState.coinsPerSecond += upgrade.baseProfit;
-        else if (upgrade.profitType === 'energy') gameState.maxEnergy += upgrade.baseProfit;
-        else if (upgrade.profitType === 'regen') gameState.energyRegenRate += upgrade.baseProfit;
-        else if (upgrade.profitType === 'critical') gameState.criticalChance += upgrade.baseProfit;
-        else if (upgrade.profitType === 'critMulti') gameState.criticalMultiplier += upgrade.baseProfit;
-        else if (upgrade.profitType === 'luck') {
-            gameState.luck += upgrade.baseProfit;
-            gameState.gemDropChance += upgrade.baseProfit;
-        }
-        
-        tg.HapticFeedback.impactOccurred('medium');
-        checkAchievements();
-        updateUI();
-        saveGame();
-    } else {
-        tg.HapticFeedback.notificationOccurred('error');
-    }
-}
-
-function getUpgradeCost(upgrade) {
-    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level));
-}
-
-function activateBooster(boosterId) {
-    const booster = gameState.boosters.find(b => b.id === boosterId);
-    if (!booster || booster.active) return;
-    if (gameState.gems >= booster.cost) {
-        gameState.gems -= booster.cost;
-        if (booster.effect === 'energy') {
-            gameState.energy = gameState.maxEnergy;
-            tg.HapticFeedback.notificationOccurred('success');
-        } else {
-            booster.active = true;
-            booster.endTime = Date.now() + booster.duration;
-            
-            if (booster.effect === 'multiplier') {
-                gameState.multiplier *= booster.value;
-            } else if (booster.effect === 'frenzy' || booster.effect === 'godmode') {
-                gameState.multiplier *= booster.value;
-            }
-            
-            tg.HapticFeedback.notificationOccurred('success');
-            setTimeout(() => deactivateBooster(boosterId), booster.duration);
-        }
-        updateUI();
-        saveGame();
-    } else {
-        tg.HapticFeedback.notificationOccurred('error');
-    }
-}
-
-function deactivateBooster(boosterId) {
-    const booster = gameState.boosters.find(b => b.id === boosterId);
-    if (!booster || !booster.active) return;
-    
-    if (booster.effect === 'multiplier' || booster.effect === 'frenzy' || booster.effect === 'godmode') {
-        gameState.multiplier /= booster.value;
-    }
-    
-    booster.active = false;
-    booster.endTime = 0;
-    updateUI();
-}
-
-function buyShopItem(itemId) {
-    const item = gameState.shopItems.find(i => i.id === itemId);
-    if (!item) return;
-    
-    if (gameState.coins >= item.cost) {
-        gameState.coins -= item.cost;
-        
-        if (item.type === 'gems') {
-            gameState.gems += item.reward;
-        } else if (item.type === 'prestige_multi') {
-            if (!item.purchased) {
-                item.purchased = 1;
-            }
-        }
-        
-        tg.HapticFeedback.impactOccurred('medium');
-        updateUI();
-        saveGame();
-    } else {
-        tg.HapticFeedback.notificationOccurred('error');
-    }
-}
-
 function doPrestige() {
     if (gameState.level < 10) {
+        alert('Нужен минимум 10 уровень!');
         tg.HapticFeedback.notificationOccurred('error');
         return;
     }
@@ -602,8 +513,6 @@ function doPrestige() {
     
     if (confirm(`Сбросить прогресс за ${prestigeGain} престижных очков?`)) {
         gameState.prestigePoints += prestigeGain;
-        
-        // Сброс
         gameState.coins = 0;
         gameState.level = 1;
         gameState.experience = 0;
@@ -615,7 +524,6 @@ function doPrestige() {
         gameState.gemsFound = 0;
         
         initializeUpgrades();
-        
         tg.HapticFeedback.notificationOccurred('success');
         recalculateStats();
         updateTheme();
@@ -665,7 +573,6 @@ function updateUI() {
     document.getElementById('currentProgress').textContent = formatNumber(gameState.experience);
     document.getElementById('nextLevelRequirement').textContent = formatNumber(requiredExp);
     
-    // Престиж
     const prestigeGain = Math.floor(gameState.level / 10);
     const prestigeBonus = gameState.prestigePoints * 10;
     document.getElementById('prestigePoints').textContent = gameState.prestigePoints;
@@ -877,7 +784,6 @@ setInterval(() => {
 }, 1000);
 
 setInterval(() => saveGame(), 5000);
-setInterval(() => syncWithServer(), 30000);
 
 document.getElementById('bonusModal').addEventListener('click', (e) => {
     if (e.target.id === 'bonusModal') document.getElementById('bonusModal').classList.remove('show');
@@ -894,6 +800,6 @@ document.getElementById('levelUpModal').addEventListener('click', (e) => {
 loadGame();
 updateUI();
 
-tg.MainButton.text = "💾 Сохранить в облако";
-tg.MainButton.onClick(() => syncWithServer());
+tg.MainButton.text = "💾 Сохранить";
+tg.MainButton.onClick(() => saveGame());
 if (gameState.level > 1) tg.MainButton.show();
