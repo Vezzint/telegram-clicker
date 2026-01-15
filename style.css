@@ -38,7 +38,6 @@ body {
     background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 
-/* Шапка */
 .header {
     padding: 16px;
     background: var(--bg-secondary);
@@ -123,7 +122,6 @@ body {
     color: var(--accent-glow);
 }
 
-/* Игровая зона */
 .game-area {
     padding: 24px 16px;
     position: relative;
@@ -241,7 +239,6 @@ body {
     100% { transform: translateY(-60px); opacity: 0; }
 }
 
-/* Энергия бар */
 .energy-bar-container {
     width: 200px;
     margin-top: 16px;
@@ -262,7 +259,6 @@ body {
     transition: width 0.3s;
 }
 
-/* Прогресс бар */
 .progress-container {
     margin-bottom: 24px;
 }
@@ -289,7 +285,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* Вкладки */
 .tabs {
     display: flex;
     gap: 8px;
@@ -322,7 +317,6 @@ body {
     border-color: var(--accent-secondary);
 }
 
-/* Контент вкладок */
 .tab-content {
     padding: 0 16px 24px;
 }
@@ -335,7 +329,6 @@ body {
     display: block;
 }
 
-/* Список улучшений */
 .upgrades-list {
     display: flex;
     flex-direction: column;
@@ -426,7 +419,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Бустеры */
 .boosters-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -483,7 +475,6 @@ body {
     margin-top: 4px;
 }
 
-/* Достижения */
 .achievements-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -546,7 +537,6 @@ body {
     color: var(--text-muted);
 }
 
-/* Статистика */
 .stats-list {
     display: flex;
     flex-direction: column;
@@ -574,7 +564,6 @@ body {
     font-weight: 700;
 }
 
-/* Модальное окно */
 .modal {
     display: none;
     position: fixed;
