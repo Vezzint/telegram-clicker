@@ -7,14 +7,14 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Dark Clicker</title>
-    <link rel="stylesheet" href="style.css?v=2.4">
+    <link rel="stylesheet" href="style.css?v=3.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body>
+<body class="theme-dark">
     <div class="container">
         <div class="header">
             <div class="user-info">
-                <img class="avatar" id="userAvatar" style="display:none;">
+                <div class="avatar" id="userAvatar">👤</div>
                 <div class="user-details">
                     <div class="username" id="username">Player</div>
                     <div class="level">Уровень <span id="level">1</span></div>
@@ -24,8 +24,8 @@
                 </button>
             </div>
             <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-label">Очки</div>
+                <div class="stat-item balance-display">
+                    <div class="stat-label">💎 Баланс</div>
                     <div class="stat-value" id="points">0</div>
                 </div>
                 <div class="stat-item">
@@ -54,8 +54,8 @@
                     <svg viewBox="0 0 100 100" class="crystal-svg">
                         <defs>
                             <linearGradient id="crystalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#8b6bb8;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#6b4e9e;stop-opacity:1" />
+                                <stop offset="0%" class="crystal-stop-1" />
+                                <stop offset="100%" class="crystal-stop-2" />
                             </linearGradient>
                         </defs>
                         <polygon points="50,10 80,35 70,70 30,70 20,35" class="crystal-shape"/>
@@ -131,6 +131,10 @@
                         <span>Куплено улучшений:</span>
                         <span id="upgradesBought">0</span>
                     </div>
+                    <div class="stat-row">
+                        <span>Собрано наград:</span>
+                        <span id="achievementsUnlocked">0</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -144,6 +148,25 @@
         </div>
     </div>
 
-    <script src="script.js?v=2.4"></script>
+    <div class="modal" id="achievementModal">
+        <div class="modal-content achievement-popup">
+            <h2>🎉 Достижение!</h2>
+            <div class="achievement-popup-icon" id="achievementPopupIcon">🏆</div>
+            <div class="achievement-popup-name" id="achievementPopupName">Новое достижение</div>
+            <div class="achievement-popup-reward" id="achievementPopupReward">+100 💎</div>
+            <button class="claim-btn" id="claimAchievement">Забрать награду</button>
+        </div>
+    </div>
+
+    <div class="modal" id="levelUpModal">
+        <div class="modal-content level-up-popup">
+            <h2>⭐ Новый уровень!</h2>
+            <div class="level-up-number" id="levelUpNumber">2</div>
+            <div class="level-up-reward" id="levelUpReward">+500 💎</div>
+            <button class="claim-btn" id="closeLevelUp">Продолжить</button>
+        </div>
+    </div>
+
+    <script src="script.js?v=3.0"></script>
 </body>
 </html>
